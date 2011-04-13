@@ -1,0 +1,26 @@
+#This is a sample game file 
+
+#Gameplay options
+#The speed of the gameplay (optional)
+#gameplay.speed=10
+#The arena file to load (required)
+gameplay.field=example.field
+#The maximum number of agents per team (optional)
+gameplay.agents=10
+#The number of timesteps between respawn phases (optional)
+gameplay.respawn=30
+
+#Protocol options
+#Maximum personal message size (optional)
+message.size=256
+#The size of the neighborhood scan (N * 2 +1)
+message.neighborhood=3
+
+#Team specification
+#Each team description contains three definitions
+#Team id (required)
+team1=samples
+#Team name (optional)
+team1.name=Samples
+team2=humans
+team2.name=Humans
