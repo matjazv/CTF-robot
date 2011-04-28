@@ -119,6 +119,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 			case EXPLORE:
 				break;
 			case RETURN: {
+				decideOnReturn();
 				break;
 			}
 			case SEEK: {
@@ -141,6 +142,12 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		
 	}
 	
+	private void decideOnReturn() {
+	// TODO Auto-generated method stub
+		// pomnoi smrerem  Decision left, right, up, down, still  
+		// this.left.multiplyWeight(  nekaTvojaUtez ) - ne oyiraj se na to ali se lahko tja premakne ali ne
+}
+
 	@Override
 	public void receive(int from, byte[] message) {
 
@@ -157,7 +164,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		if ( this.knownArena == null) {
 			knownArena = new KnownArena(neighborhood);
 		}
-		else
+		else if ( direction == Direction.NONE )
 			knownArena.updateArena(neighborhood);
 		
 		
@@ -184,7 +191,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 			try {
 
 				scanAndWait();
-				move(updateDecisions(n, state));
+				move(updateDecisions(neighborhood, state).getDirection());
 
 			} catch (InterruptedException e) {
 				e.printStackTrace();
