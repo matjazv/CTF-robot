@@ -20,6 +20,7 @@ package fri.pipt.server;
 import java.awt.Color;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -50,7 +51,7 @@ public class Team {
 	
 	public static class Flag extends TeamBody {
 
-		public Flag(int tile, Team team) {
+		private Flag(int tile, Team team) {
 			super(tile, team);
 		}
 		
@@ -58,20 +59,21 @@ public class Team {
 
 	public static class Headquarters extends TeamBody {
 
-		private Flag flag = null;
-		
 		public Headquarters(int tile, Team team) {
 			super(tile, team);
 		}
 
-		public boolean hasFlag() {
-			return flag != null;
-		}
-		
 		public void putFlag(Flag flag) {
 			
 			if (flag != null && flag.getTeam() == getTeam()) {
-				this.flag = flag;
+				
+				if (getTeam().flags.contains(flag)) {
+				
+					getTeam().score++;
+					getTeam().scoreChange(getTeam().score);
+					getTeam().flags.remove(flag);
+					
+				}
 			}
 			
 		}
@@ -86,13 +88,15 @@ public class Team {
 	
 	private HashSet<Integer> allocatedIds = new HashSet<Integer>();
 	
+	private HashSet<Flag> flags = new HashSet<Flag>();
+	
 	private String name;
 	
 	private Headquarters hq;
 	
-	private Flag flag;
-
 	private Color color;
+	
+	private int score = 0;
 	
 	public Team(String name, Color color) {
 		
@@ -100,8 +104,7 @@ public class Team {
 		this.color = color;
 		
 		hq = new Headquarters(Arena.TILE_HEADQUARTERS, this);
-		flag = new Flag(Arena.TILE_FLAG, this);
-		
+
 	}
 	
 	public Headquarters getHeadquarters() {
@@ -122,9 +125,13 @@ public class Team {
 		
 	}
 	
-	public Flag getFlag() {
+	public Flag newFlag() {
 		
-		return flag;
+		Flag f = new Flag(Arena.TILE_FLAG, this);
+		
+		flags.add(f);
+		
+		return f;
 		
 	}
 	
@@ -151,6 +158,9 @@ public class Team {
 	}
 	
 	public void addClient(Client client) {
+
+		if (client == null)
+			return;
 		
 		synchronized (pool) {
 			
@@ -158,7 +168,7 @@ public class Team {
 			
 		}
 
-
+		clientConnected(client);
 	}
 	
 	public void removeClient(Client client) {
@@ -181,6 +191,8 @@ public class Team {
 			
 		}
 
+		clientDisconnected(client);
+		
 	}
 	
 	public int size() {
@@ -236,20 +248,24 @@ public class Team {
 	}
 	
 	
-	public void move(Field field) {
+	public List<Agent> move(Field field) {
+		
+		Vector<Agent> moved = new Vector<Agent>();
 		
 		synchronized (pool) {
 
 			for (Client c : used) {
 			
 				if (c.getAgent() != null) {
-					c.getAgent().move(field);
+					if (c.getAgent().move(field))
+						moved.add(c.getAgent());
 				}
 				
 			}
 
 		}
-		
+	
+		return moved;
 	}
 	
 	public Client findById(int id) {
@@ -266,6 +282,10 @@ public class Team {
 			return null;
 		}
 		
+	}
+	
+	public int getActiveFlagsCount() {
+		return flags.size();
 	}
 	
 	public String toString() {
@@ -287,4 +307,54 @@ public class Team {
 
 	}
 	
+	private Vector<TeamListener> listeners = new Vector<TeamListener>();
+
+	public void addListener(TeamListener listener) {
+		synchronized (listeners) {
+			listeners.add(listener);
+		}
+		
+	}
+	
+	public void removeListener(TeamListener listener) {
+		synchronized (listeners) {
+			listeners.remove(listener);
+		}
+	}
+	
+	private void clientConnected(Client client) {
+		
+		synchronized (listeners) {
+			for (TeamListener l : listeners) {
+				try {
+					l.clientConnect(this, client);
+				} catch (Exception e) {e.printStackTrace();}
+				
+			}
+		}
+	}
+	
+	private void clientDisconnected(Client client) {
+		
+		synchronized (listeners) {
+			for (TeamListener l : listeners) {
+				try {
+					l.clientDisconnect(this, client);
+				} catch (Exception e) {e.printStackTrace();}
+				
+			}
+		}
+	}
+	
+	private void scoreChange(int score) {
+		
+		synchronized (listeners) {
+			for (TeamListener l : listeners) {
+				try {
+					l.scoreChange(this, score);
+				} catch (Exception e) {e.printStackTrace();}
+				
+			}
+		}
+	}
 }

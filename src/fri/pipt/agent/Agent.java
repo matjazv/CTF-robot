@@ -20,6 +20,7 @@ package fri.pipt.agent;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import fri.pipt.agent.sample.SampleAgent;
@@ -35,8 +36,8 @@ import fri.pipt.protocol.Message.StateMessage;
  * used to launch the client and handles all low level protocol communication
  * and the lifecycle of the agent.
  * 
- * To run the sample agent type:
- * java -cp bin/ fri.pipt.agent.Agent localhost fri.pipt.agent.sample.SampleAgent
+ * To run the sample agent type: java -cp bin/ fri.pipt.agent.Agent localhost
+ * fri.pipt.agent.sample.SampleAgent
  * 
  * @author lukacu
  * @see SampleAgent
@@ -44,22 +45,24 @@ import fri.pipt.protocol.Message.StateMessage;
 @Membership("default")
 public abstract class Agent {
 
-	private static ConcurrentLinkedQueue<Message> inbox = new ConcurrentLinkedQueue<Message>();
-
-	private static ClientProtocolSocket client;
-
 	private static Class<Agent> agentClass = null;
 
-	private static Agent agent = null;
+	private static Vector<ClientProtocolSocket> clients = new Vector<ClientProtocolSocket>();
 
-	private static class ClientProtocolSocket extends ProtocolSocket {
-
-		public static enum Status {
-			UNKNOWN, REGISTERED, INITIALIZED
-		}
+	public static enum Status {
+		UNKNOWN, REGISTERED, INITIALIZED
+	}
+	
+	private static class ClientProtocolSocket extends ProtocolSocket implements Runnable {
+		
+		private ConcurrentLinkedQueue<Message> inbox = new ConcurrentLinkedQueue<Message>();
 
 		private Status status = Status.UNKNOWN;
 
+		private Agent agent = null;
+		
+		private boolean terminated = false;
+		
 		public ClientProtocolSocket(Socket sck) throws IOException {
 			super(sck);
 
@@ -87,11 +90,20 @@ public abstract class Agent {
 				if (message instanceof Message.InitializeMessage) {
 
 					try {
-						
+
 						agent = agentClass.newInstance();
 
 						agent.id = ((Message.InitializeMessage) message)
 								.getId();
+
+						agent.client = this;
+						
+						agent.maxMessageSize = ((Message.InitializeMessage) message)
+								.getMaxMessageSize();
+
+						agent.gameSpeed = ((Message.InitializeMessage) message)
+								.getGameSpeed();
+
 						try {
 							agent.initialize();
 						} catch (Exception e) {
@@ -151,8 +163,81 @@ public abstract class Agent {
 
 		@Override
 		protected void onTerminate() {
+			switch (status) {
+			case UNKNOWN: 
+				System.out.println("ERROR: Unable to connect. Did you set the membership information correctly?");
+				break;
+			case REGISTERED: 
+				System.out.println("ERROR: Disconnected by server.");
+				break;	
+			case INITIALIZED: 
+				System.out.println("ERROR: Disconnected by server.");
+				break;			
+			}
 			super.onTerminate();
-			System.exit(0);
+			terminated = true;
+		}
+
+		@Override
+		public void run() {
+			Thread messages = new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+
+					while (true) {
+
+						synchronized (inbox) {
+							while (inbox.isEmpty()) {
+								try {
+									inbox.wait();
+								} catch (InterruptedException e) {
+								}
+							}
+						}
+
+						Message msg = inbox.poll();
+
+						if (agent != null && isAlive()) {
+							try {
+
+								if (msg instanceof ReceiveMessage) {
+									agent.receive(((ReceiveMessage) msg).getFrom(),
+											((ReceiveMessage) msg).getMessage());
+								} else if (msg instanceof StateMessage) {
+									agent.state(((StateMessage) msg).getStamp(),
+											((StateMessage) msg).getNeighborhood(),
+											((StateMessage) msg).getDirection(),
+											((StateMessage) msg).hasFlag());
+								}
+
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+
+					}
+				}
+			});
+			messages.start();
+
+			try {
+
+				while (true) {
+
+					if (agent != null)
+						agent.run();
+
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+					}
+
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 	}
@@ -163,68 +248,41 @@ public abstract class Agent {
 
 		agentClass = (Class<Agent>) Class.forName(args[1]);
 
-		Socket socket = new Socket(args[0], 5000);
+		int count = 1;
+		
+		if (args.length > 2)
+			count = Integer.parseInt(args[2]);
+		
+		for (int i = 0; i < count; i++) {
+			Socket socket = new Socket(args[0], 5000);
 
-		client = new ClientProtocolSocket(socket);
-
-		Thread messages = new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-
-				while (true) {
-
-					synchronized (inbox) {
-						while (inbox.isEmpty()) {
-							try {
-								inbox.wait();
-							} catch (InterruptedException e) {
-							}
-						}
-					}
-
-					Message msg = inbox.poll();
-
-					if (agent != null && client.isAlive()) {
-						try {
-
-							if (msg instanceof ReceiveMessage) {
-								agent.receive(((ReceiveMessage) msg).getFrom(),
-										((ReceiveMessage) msg).getMessage());
-							} else if (msg instanceof StateMessage) {
-								agent.state(((StateMessage) msg).getStamp(),
-										((StateMessage) msg).getNeighborhood(),
-										((StateMessage) msg).getDirection(),
-										((StateMessage) msg).hasFlag());
-							}
-
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-					}
-
-				}
-			}
-		});
-		messages.start();
-
-		try {
-
-			while (true) {
-
-				if (agent != null)
-					agent.run();
-
-				try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
-				}
-
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
+			ClientProtocolSocket client = new ClientProtocolSocket(socket);
+			
+			Thread thread = new Thread(client);
+			thread.start();
+			
+			clients.add(client);
+			
 		}
+
+		while (true) {
+			
+			boolean alive = true;
+			
+			for (ClientProtocolSocket c : clients) {
+				
+				alive &= !c.terminated;
+				
+			}
+			
+			if (!alive) break;
+			
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {}
+			
+		}
+		
 
 		System.exit(0);
 
@@ -232,6 +290,12 @@ public abstract class Agent {
 
 	private int id;
 
+	private int maxMessageSize;
+
+	private int gameSpeed;
+
+	private ClientProtocolSocket client;
+	
 	/**
 	 * Called when the agent is no longer needed.
 	 */
@@ -255,6 +319,8 @@ public abstract class Agent {
 	 */
 	public final void send(int to, byte[] message) {
 
+		if (!isAlive()) return;
+		
 		client.sendMessage(new Message.SendMessage(to, message));
 
 	}
@@ -272,6 +338,8 @@ public abstract class Agent {
 	 */
 	public final void send(int to, String message) {
 
+		if (!isAlive()) return;
+		
 		client.sendMessage(new Message.SendMessage(to, message.getBytes()));
 
 	}
@@ -286,19 +354,24 @@ public abstract class Agent {
 	 */
 	public final void move(Direction direction) {
 
+		if (!isAlive()) return;
+		
 		client.sendMessage(new Message.MoveMessage(direction));
 
 	}
 
 	/**
-	 * Sends a scan request to the server. The server will respond with the local state
-	 * of the environment that will be returned to the agent using the 
-	 * {@link #state(int, Neighborhood, Direction, boolean)} callback. 
+	 * Sends a scan request to the server. The server will respond with the
+	 * local state of the environment that will be returned to the agent using
+	 * the {@link #state(int, Neighborhood, Direction, boolean)} callback.
 	 * 
-	 * @param stamp the stamp of the request
+	 * @param stamp
+	 *            the stamp of the request
 	 */
 	public final void scan(int stamp) {
 
+		if (!isAlive()) return;
+		
 		client.sendMessage(new Message.ScanMessage(stamp));
 
 	}
@@ -316,10 +389,14 @@ public abstract class Agent {
 	/**
 	 * Called as a result of a {@link #scan(int)} instruction
 	 * 
-	 * @param stamp the stamp of the request
-	 * @param neighborhood the neighborhood information
-	 * @param direction the direction of the movement
-	 * @param hasFlag does this agent carry the flag of the team
+	 * @param stamp
+	 *            the stamp of the request
+	 * @param neighborhood
+	 *            the neighborhood information
+	 * @param direction
+	 *            the direction of the movement
+	 * @param hasFlag
+	 *            does this agent carry the flag of the team
 	 */
 	public abstract void state(int stamp, Neighborhood neighborhood,
 			Direction direction, boolean hasFlag);
@@ -335,7 +412,7 @@ public abstract class Agent {
 	 * @return true if the agent is alive, false otherwise
 	 */
 	public final boolean isAlive() {
-		return agent == this;
+		return client.agent == this;
 	}
 
 	/**
@@ -346,4 +423,25 @@ public abstract class Agent {
 	public final int getId() {
 		return id;
 	}
+
+	/**
+	 * Returns the execution speed of the server. Useful for setting delays.
+	 * 
+	 * @return the speed of the server. The server iterates time-steps with
+	 *         (approximately) <tt>1000 / speed</tt> milliseconds delay.
+	 */
+	public final int getSpeed() {
+		return gameSpeed;
+	}
+
+	/**
+	 * Returns the maximum allowed message size. Sending a message that is
+	 * longer will result in server dropping the message.
+	 * 
+	 * @return the maximum message size in bytes
+	 */
+	public final int getMaxMessageSize() {
+		return maxMessageSize;
+	}
+
 }

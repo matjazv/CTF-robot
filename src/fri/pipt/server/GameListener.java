@@ -17,12 +17,14 @@
  */
 package fri.pipt.server;
 
-import fri.pipt.protocol.Message.Direction;
+import fri.pipt.server.Field.BodyPosition;
 
 public interface GameListener {
 
 	public void message(Team team, int from, int to, int length);
 	
-	public void move(Team team, int id, Direction direction);
+	public void position(Team team, int id, BodyPosition p);
+	
+	public void step();
 	
 }

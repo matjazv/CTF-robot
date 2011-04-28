@@ -20,6 +20,8 @@ package fri.pipt.server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashSet;
+import java.util.Vector;
 
 import fri.pipt.protocol.Message;
 import fri.pipt.protocol.Neighborhood;
@@ -136,6 +138,10 @@ public class Dispatcher implements Runnable {
 			return agent;
 		}
 
+		public Team getTeam() {
+			return team;
+		}
+		
 		public void setAgent(Agent agent) {
 		
 			if (this.agent != null)
@@ -143,10 +149,12 @@ public class Dispatcher implements Runnable {
 			
 			this.agent = agent;
 			
+			agent(agent);
+			
 			if (agent == null)
 				return;
 			
-			sendMessage(new Message.InitializeMessage(agent.getId()));
+			sendMessage(new Message.InitializeMessage(agent.getId(), maxMessageSize, game.getSpeed()));
 			
 		}
 
@@ -155,6 +163,11 @@ public class Dispatcher implements Runnable {
 			
 			if (team != null)
 				team.removeClient(this);
+			
+			synchronized (clients) {
+				clients.remove(this);
+			}
+			
 			
 		}
 		
@@ -171,8 +184,59 @@ public class Dispatcher implements Runnable {
 				return tmp;
 			}
 		}
+
+		private Vector<ClientListener> listeners = new Vector<ClientListener>();
+
+		public void addListener(ClientListener listener) {
+			synchronized (listeners) {
+				listeners.add(listener);
+			}
+			
+		}
+		
+		public void removeListener(ClientListener listener) {
+			synchronized (listeners) {
+				listeners.remove(listener);
+			}
+		}
+		
+		private void agent(Agent agent) {
+			
+			synchronized (listeners) {
+				for (ClientListener l : listeners) {
+					try {
+						l.agent(this, agent);
+					} catch (Exception e) {e.printStackTrace();}
+					
+				}
+			}
+		}
+		
+		private void transfer(int messages) {
+			
+			synchronized (listeners) {
+				for (ClientListener l : listeners) {
+					try {
+						l.transfer(this, messages);
+					} catch (Exception e) {e.printStackTrace();}
+					
+				}
+			}
+		}
+		
+		public void traffic() {
+			
+			synchronized (this) {
+				transfer(messages);
+				
+				messages = 0;				
+			}
+
+		}
 		
 	}
+	
+	private HashSet<Client> clients = new HashSet<Client>();
 	
 	private ServerSocket socket;
 	
@@ -188,20 +252,49 @@ public class Dispatcher implements Runnable {
 		
 		this.game = game;
 		
-		this.maxMessageSize = game.getProperty("message.size", 1024);
+		this.maxMessageSize = game.getProperty("message.size", 256);
 
-		this.neighborhoodSize = game.getProperty("message.neighborhood", 10);
+		this.neighborhoodSize = game.getNeighborhoodSize();
 		
 	}
 
 	@Override
 	public void run() {
 		
+		Thread traffic = new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				
+				while (true) {
+					synchronized (clients) {
+					
+						for (Client cl : clients) {
+							cl.traffic();
+						}
+						
+					}
+				
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+
+					}
+				
+				}
+			}
+		});
+		traffic.setDaemon(true);
+		traffic.start();
+		
+		
 		while (true) {
 			try {
 				Socket sck = socket.accept();
 				
-				new Client(sck);
+				synchronized (clients) {
+					clients.add(new Client(sck));
+				}
 				
 				
 			} catch (IOException e) {

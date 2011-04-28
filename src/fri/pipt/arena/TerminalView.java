@@ -32,7 +32,7 @@ public class TerminalView implements ArenaView {
 				int body = view.getBodyTile(i, j);
 
 				if (body >= Arena.TILE_WALL_0 && body <= Arena.TILE_WALL_9) {
-					System.out.print('?');
+					System.out.print('∎');
 					continue;
 				}
 				

@@ -22,7 +22,6 @@ import java.util.HashMap;
 
 import fri.pipt.agent.Agent;
 import fri.pipt.agent.Membership;
-import fri.pipt.arena.TerminalView;
 import fri.pipt.protocol.Neighborhood;
 import fri.pipt.protocol.Position;
 import fri.pipt.protocol.Message.Direction;
@@ -35,8 +34,6 @@ public class SampleAgent extends Agent {
 	private static enum AgentState {
 		EXPLORE, SEEK, RETURN
 	}
-
-	private TerminalView arena = new TerminalView();
 
 	private int x = 0;
 
@@ -81,13 +78,16 @@ public class SampleAgent extends Agent {
 	public void state(int stamp, Neighborhood neighborhood, Direction direction,
 			boolean hasFlag) {
 
-		this.neighborhood = neighborhood;
-		this.direction = direction;
-
-		if (state != AgentState.RETURN && hasFlag)
-			state = AgentState.RETURN;
-
+		
 		synchronized (waitMutex) {
+			this.neighborhood = neighborhood;
+			this.direction = direction;
+
+			if (state != AgentState.RETURN && hasFlag)
+				state = AgentState.RETURN;
+
+			this.hasFlag = hasFlag;
+			
 			waitMutex.notify();
 		}
 	}
@@ -157,8 +157,6 @@ public class SampleAgent extends Agent {
 
 				scanAndWait();
 
-				arena.update(neighborhood);
-
 				analyzeNeighborhood(neighborhood);
 
 				System.out.printf("Current position: %d, %d, state: %s \n", x, y, state.toString());
@@ -216,6 +214,8 @@ public class SampleAgent extends Agent {
 
 	private Direction direction;
 
+	private boolean hasFlag = false;
+	
 	private void scanAndWait() throws InterruptedException {
 
 		synchronized (waitMutex) {
@@ -231,7 +231,7 @@ public class SampleAgent extends Agent {
 
 			for (int j = -n.getSize(); j <= n.getSize(); j++) {
 
-				if (n.getCell(i, j) == Neighborhood.FLAG) {
+				if (n.getCell(i, j) == Neighborhood.FLAG && !hasFlag) {
 
 					System.out.println("Found flag !!!");
 					
@@ -251,7 +251,7 @@ public class SampleAgent extends Agent {
 
 				if (n.getCell(i, j) > 0) {
 
-					if (i != 0 && j != 0)
+					if (! (i == 0 && j == 0) )
 						send(n.getCell(i, j), "Hello " + n.getCell(i, j) + "!");
 					
 					continue;

@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
@@ -40,7 +41,23 @@ import fri.pipt.server.Team.TeamBody;
 
 public class Game {
 
+	/**
+	 * Game mode: - Unique: only one flag, positioned on the predetermined
+	 * position - Random: randomly positioned flags - Respawn: randomly
+	 * positioned flags that are respawned
+	 * 
+	 */
+	public enum FlagMode {
+		UNIQUE, RANDOM, RESPAWN
+	}
+
+	private FlagMode flagMode;
+
 	private int spawnFrequency = 10;
+
+	private int flagSpawnFrequency = 10;
+
+	private int flagPoolCount = 10;
 
 	private Field field;
 
@@ -48,36 +65,39 @@ public class Game {
 
 	private int maxAgentsPerTeam = 10;
 
-	private int maxMessageDistance = 10;
+	private int neighborhoodSize = 10;
 
 	private Properties properties = null;
 
 	private File gameSource;
-	
+
 	private Vector<GameListener> listeners = new Vector<GameListener>();
-	
+
 	private static final Color[] colors = new Color[] { Color.red, Color.blue,
 			Color.green, Color.yellow, Color.pink, Color.orange, Color.black,
 			Color.white };
 
 	/**
-	 * Computes Manhattan distance between two agents
+	 * Computes L_inf norm for distance between two agents
 	 * 
-	 * @param a1 agent 1
-	 * @param a2 agent 2
-	 * @return Manhattan distance
+	 * @param a1
+	 *            agent 1
+	 * @param a2
+	 *            agent 2
+	 * @return distance (maximum of X or Y difference)
 	 */
 	private int distance(Agent a1, Agent a2) {
-		
+
 		if (a1 == null || a2 == null)
 			return -1;
-		
+
 		BodyPosition bp1 = field.getPosition(a1);
 		BodyPosition bp2 = field.getPosition(a2);
-		
-		return Math.abs(bp1.getX() - bp2.getX()) + Math.abs(bp1.getY() - bp2.getY());
+
+		return Math.max(Math.abs(bp1.getX() - bp2.getX()), Math.abs(bp1.getY()
+				- bp2.getY()));
 	}
-	
+
 	private Game() throws IOException {
 
 	}
@@ -106,7 +126,13 @@ public class Game {
 		game.properties.load(new FileReader(f));
 
 		game.gameSource = f;
-		
+
+		game.flagMode = FlagMode.valueOf(game.properties.getProperty(
+				"gameplay.flags", "unique").toUpperCase());
+
+		if (game.flagMode == null)
+			game.flagMode = FlagMode.UNIQUE;
+
 		int index = 0;
 
 		while (true) {
@@ -122,7 +148,7 @@ public class Game {
 			if (name == null)
 				name = id;
 
-			game.teams.put(id, new Team(name, colors[index]));
+			game.teams.put(id, new Team(name, colors[index - 1]));
 
 			System.out.println("Registered team: " + id);
 
@@ -137,14 +163,33 @@ public class Game {
 			fldFile = new File(f.getParentFile(), fldPath);
 		}
 
-		game.field = Field.loadFromFile(fldFile, game);
-
 		game.spawnFrequency = game.getProperty("gameplay.respawn", 30);
 
 		game.maxAgentsPerTeam = game.getProperty("gameplay.agents", 10);
 
-		game.maxMessageDistance = game.getProperty("message.distance", 10);
-		
+		game.neighborhoodSize = game.getProperty("message.neighborhood", 10);
+
+		if (game.flagMode == FlagMode.RESPAWN) {
+
+			game.flagSpawnFrequency = game.getProperty(
+					"gameplay.flags.respawn", 30);
+
+			game.flagPoolCount = game.getProperty("gameplay.flags.pool", 10);
+
+		}
+
+		if (game.flagMode == FlagMode.RANDOM) {
+
+			game.flagPoolCount = game.getProperty("gameplay.flags.pool", 10);
+
+		}
+
+		game.field = Field.loadFromFile(fldFile, game);
+
+		if (game.flagMode != FlagMode.UNIQUE) {
+			game.spawnNewFlags();
+		}
+
 		return game;
 
 	}
@@ -155,7 +200,9 @@ public class Game {
 
 	}
 
-	private int spawnCounter = spawnFrequency;
+	private int spawnCounter = 1;
+
+	private int flagSpawnCounter = 1;
 
 	private int step = 0;
 
@@ -163,12 +210,24 @@ public class Game {
 
 		step++;
 
-		if (step % 100 == 0)
-			System.out.println("Game step: " + step);
-
+		fireStepEvent();
+		
 		// handle moves and collisions
 		for (Team t : teams.values()) {
-			t.move(field);
+			for (Agent a : t.move(field)) {
+				
+				synchronized (listeners) {
+					for (GameListener l : listeners) {
+						try {
+							l.position(t, a.getId(), field.getPosition(a));
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+
+					}
+				}
+				
+			}
 		}
 
 		// spawn new agents
@@ -176,6 +235,15 @@ public class Game {
 		if (spawnCounter == 0) {
 			spawnNewAgents();
 			spawnCounter = spawnFrequency;
+		}
+
+		if (flagMode == FlagMode.RESPAWN) {
+			// spawn new flags
+			flagSpawnCounter--;
+			if (flagSpawnCounter == 0) {
+				spawnNewFlags();
+				flagSpawnCounter = flagSpawnFrequency;
+			}
 		}
 
 		// remove dead agents
@@ -219,6 +287,43 @@ public class Game {
 
 			}
 
+		}
+
+	}
+
+	private void spawnNewFlags() {
+
+		int add = 0;
+
+		for (Team t : teams.values()) {
+
+			add += Math.max(0, flagPoolCount - t.getActiveFlagsCount());
+
+		}
+
+		if (add == 0)
+			return;
+
+		List<Cell> freeCells = field.listEmptyFields(true);
+
+		if (freeCells.size() < add)
+			return;
+
+		Vector<Flag> flags = new Vector<Flag>();
+
+		for (Team t : teams.values()) {
+
+			int nf = Math.max(0, flagPoolCount - t.getActiveFlagsCount());
+			for (int i = 0; i < nf; i++)
+				flags.add(t.newFlag());
+		}
+
+		Collections.shuffle(flags);
+		Collections.shuffle(freeCells);
+
+		for (int i = 0; i < flags.size(); i++) {
+			field.putBody(flags.get(i), new BodyPosition(freeCells.get(i)
+					.getPosition(), 0, 0));
 		}
 
 	}
@@ -308,10 +413,10 @@ public class Game {
 	public String getName() {
 		if (properties.contains("title"))
 			return properties.getProperty("title");
-		
+
 		return gameSource.getAbsolutePath();
 	}
-	
+
 	public int getStep() {
 		return step;
 	}
@@ -320,64 +425,86 @@ public class Game {
 		synchronized (listeners) {
 			listeners.add(listener);
 		}
-		
+
 	}
-	
+
 	public void removeListener(GameListener listener) {
 		synchronized (listeners) {
 			listeners.remove(listener);
 		}
 	}
-	
+
 	public synchronized void message(Team team, int from, int to, byte[] message) {
 		Client cltto = team.findById(to);
 		Client cltfrom = team.findById(from);
-		
+
 		if (from == to) {
-			System.out.printf("Message from %d to %d rejected: same agent", from, to);
+			System.out.printf("Message from %d to %d rejected: same agent\n",
+					from, to);
 			return;
 		}
-		
+
 		if (cltto != null && cltfrom != null) {
-			
+
 			int dst = distance(cltfrom.getAgent(), cltto.getAgent());
-			if (dst > maxMessageDistance || dst < 0) {
-				System.out.printf("Message from %d to %d rejected: too far away", from, to);
+			if (dst > neighborhoodSize || dst < 0) {
+				System.out.printf(
+						"Message from %d to %d rejected: too far away\n", from,
+						to);
 				return;
 			}
-			
+
 			cltto.sendMessage(new Message.ReceiveMessage(from, message));
-									
-		} else return;
-		
-		
+
+		} else
+			return;
+
 		synchronized (listeners) {
 			for (GameListener l : listeners) {
 				try {
 					l.message(team, from, to, message.length);
-				} catch (Exception e) {e.printStackTrace();}
-				
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
 			}
 		}
 	}
-	
-	public synchronized void move(Team team, int agent, Direction direction) {
-		
-		Client clt = team.findById(agent);
-		
-		if (clt != null && clt.getAgent() != null) {
-			clt.getAgent().setDirection(direction);
-		}
+
+	private void fireStepEvent() {
 		
 		synchronized (listeners) {
 			for (GameListener l : listeners) {
 				try {
-					l.move(team, agent, direction);
-				} catch (Exception e) {e.printStackTrace();}
-				
+					l.step();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
 			}
 		}
 		
 	}
 	
+	public synchronized void move(Team team, int agent, Direction direction) {
+
+		Client clt = team.findById(agent);
+
+		if (clt != null && clt.getAgent() != null) {
+			clt.getAgent().setDirection(direction);
+		}
+
+	}
+
+	public int getSpeed() {
+		return getProperty("gameplay.speed", 10);
+	}
+
+	public FlagMode getFlagMode() {
+		return flagMode;
+	}
+
+	public int getNeighborhoodSize() {
+		return neighborhoodSize;
+	}
 }

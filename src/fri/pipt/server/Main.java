@@ -26,26 +26,43 @@ import java.util.LinkedList;
 
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 
+import fri.pipt.arena.Arena;
 import fri.pipt.arena.SwingView;
-import fri.pipt.protocol.Message.Direction;
+import fri.pipt.server.ClientsPanel.SelectionObserver;
+import fri.pipt.server.Dispatcher.Client;
 import fri.pipt.server.Field.BodyPosition;
 
 public class Main {
 
 	private static final int PORT = 5000;
 	
-	private static final String RELEASE = "0.3";
+	private static final String RELEASE = "0.5";
 	
 	private static Game game;
 	
-	private static class GameSwingView extends SwingView implements GameListener {
+	private static long renderTime = 0;
+	
+	private static int renderCount = 0;
+
+	private static long stepTime = 0;
+	
+	private static int stepCount = 0;
+	
+	private static Object mutex = new Object();
+	
+	private static History history = new History();
+	
+	private static class GameSwingView extends SwingView implements GameListener, SelectionObserver {
 
 		private static final long serialVersionUID = 1L;
 		
 		private static final int BUFFER_LIFE = 10;
-		
+
 		private LinkedList<Message> buffer = new LinkedList<Message>();
+		
+		private HeatMap visualization = null;
 		
 		public class Message {
 
@@ -63,9 +80,20 @@ public class Main {
 
 		}
 		
+		public GameSwingView() {
+			super(12);
+		}
+		
 		@Override
 		public void paint(Graphics g) {
-			super.paint(g);
+			
+			long start = System.currentTimeMillis();
+
+			Arena view = getArena();
+
+			paintBackground(g, visualization == null ? view : visualization);
+			
+			paintObjects(g, view);
 
 			LinkedList<Message> active = new LinkedList<Message>();
 			int current = game.getStep();
@@ -112,6 +140,15 @@ public class Main {
 				buffer = active;
 			}
 			
+			long used = System.currentTimeMillis() - start;
+			
+			synchronized (mutex) {
+				
+				renderTime += used;
+				renderCount++;
+				
+			}
+			
 		}
 
 		@Override
@@ -128,8 +165,50 @@ public class Main {
 			
 		}
 
+
 		@Override
-		public void move(Team team, int id, Direction direction) {
+		public void clientSelected(Client client) {
+			
+			synchronized (this) {
+				if (client == null) {
+					if (visualization != null)
+						game.removeListener(visualization);
+					visualization = null;
+					setBasePallette(null);
+					return;
+				}
+				
+				Agent a = client.getAgent();
+				
+				if (a == null) return;
+				
+				visualization = new HeatMap(game.getField(), history, a, game.getNeighborhoodSize());
+				setBasePallette((Palette) visualization);
+				game.addListener(visualization);
+			}
+
+		}
+
+		@Override
+		public void teamSelected(Team team) {
+						
+			synchronized (this) {
+				if (visualization != null)
+					game.removeListener(visualization);
+				
+				visualization = null;
+				setBasePallette(null);				
+			}
+
+		}
+
+		@Override
+		public void position(Team team, int id, BodyPosition p) {
+
+		}
+
+		@Override
+		public void step() {
 
 		}
 		
@@ -143,19 +222,23 @@ public class Main {
 			System.out.println("Please provide game description file location as an argument.");
 			System.exit(1);
 		}
-			
 		
+		System.out.println("Java2D OpenGL acceleration " + (("true".equalsIgnoreCase(System.getProperty("sun.java2d.opengl"))) ?
+				"enabled" : "not enabled"));
+				
 		game = Game.loadFromFile(new File(args[0]));
 		
 		Dispatcher dispatcher = new Dispatcher(PORT, game);
 		
 		(new Thread(dispatcher)).start();
 		
-		final GameSwingView arena = new GameSwingView();
+		final GameSwingView arenaview = new GameSwingView();
+
+		final int gameSpeed = game.getSpeed();
 		
-		final int gameSpeed = game.getProperty("gameplay.speed", 10);
+		game.addListener(arenaview);
 		
-		game.addListener(arena);
+		game.addListener(history);
 		
 		(new Thread(new Runnable() {
 			
@@ -165,11 +248,38 @@ public class Main {
 				
 				while (true) {
 					
+					long start = System.currentTimeMillis();
+					
 					game.step();
-					arena.update(game.getField());
+					arenaview.update(game.getField());
 
+					long used = System.currentTimeMillis() - start;
+					
+					stepTime += used;
+					stepCount++;
+
+					if (game.getStep() % 100 == 0) {
+						long renderFPS, stepFPS;
+						
+						synchronized (mutex) {
+							renderFPS = (renderCount * 1000) / Math.max(1, renderTime); 
+							renderCount = 0;
+							renderTime = 0;
+						}
+						
+						stepFPS = (stepCount * 1000) / Math.max(1, stepTime);
+						stepCount = 0;
+						stepTime = 0;
+						
+						System.out.printf("Game step: %d (step: %d fps, render: %d fps)\n", game.getStep(), stepFPS, renderFPS);
+					}
+					
 					try {
-						Thread.sleep(sleep);
+						if (used < sleep)
+							Thread.sleep(sleep - used);
+						else {
+							System.out.println("Warning: low frame rate");
+						}
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
@@ -179,14 +289,14 @@ public class Main {
 			}
 		})).start();
 
-		JFrame window = new JFrame("Game");
+		JFrame window = new JFrame("AgentField - " + game.getName());
 
 		window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-		JScrollPane pane = new JScrollPane(arena);
+		JScrollPane pane = new JScrollPane(arenaview);
 
-		window.getContentPane().add(pane);
-
+		window.getContentPane().add(new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pane, new ClientsPanel(game, arenaview)));
+		
 		window.pack();
 
 		window.setVisible(true);

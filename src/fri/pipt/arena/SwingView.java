@@ -32,14 +32,32 @@ public class SwingView extends JPanel implements ArenaView {
 
 	protected int cellSize = 24;
 
-	protected static final int CELL_BORDER = 3;
+	protected int cellBorder = 2;
 
-	private static Color[] grassColors = new Color[] {
+	public static interface Palette {
+		
+		public Color getColor(int tile);
+		
+	}
+	
+	private static Palette grassPalette = new Palette() {
+		
+		private Color[] grassColors = new Color[] {
 			new Color(0.1f, 0.6f, 0.1f), new Color(0.12f, 0.61f, 0.1f),
 			new Color(0.11f, 0.6f, 0.11f), new Color(0.1f, 0.63f, 0.1f),
 			new Color(0.1f, 0.65f, 0.1f), new Color(0.13f, 0.62f, 0.1f),
 			new Color(0.12f, 0.61f, 0.1f), new Color(0.15f, 0.6f, 0.1f),
 			new Color(0.2f, 0.65f, 0.11f), new Color(0.12f, 0.63f, 0.12f), };
+		
+		@Override
+		public Color getColor(int tile) {
+
+			if (tile < 0) tile = 0;
+			if (tile >= grassColors.length) tile = 0;
+			
+			return grassColors[tile];
+		}
+	};
 
 	private static Color[] wallColors = new Color[] {
 			new Color(0.3f, 0.3f, 0.3f), new Color(0.26f, 0.26f, 0.26f),
@@ -52,13 +70,15 @@ public class SwingView extends JPanel implements ArenaView {
 
 	public static Polygon getFlagGlyph(int cellSize) {
 
+		int polex = (int) (0.1 * cellSize);
+		
 		Polygon flag = new Polygon();
 		flag.addPoint((int) (0.1 * cellSize), (int) (0.6 * cellSize));
 		flag.addPoint((int) (0.9 * cellSize), (int) (0.3 * cellSize));
-		flag.addPoint((int) (0.1 * cellSize), (int) (0.1 * cellSize));
-		flag.addPoint((int) (0.1 * cellSize), (int) (0.9 * cellSize));
-		flag.addPoint((int) (0.15 * cellSize), (int) (0.9 * cellSize));
-		flag.addPoint((int) (0.15 * cellSize), (int) (0.6 * cellSize));
+		flag.addPoint(polex, (int) (0.1 * cellSize));
+		flag.addPoint(polex, (int) (0.9 * cellSize));
+		flag.addPoint(Math.max((int) (0.15 * cellSize), polex+1), (int) (0.9 * cellSize));
+		flag.addPoint(Math.max((int) (0.15 * cellSize), polex+1), (int) (0.6 * cellSize));
 		
 		return flag;
 	}
@@ -67,14 +87,13 @@ public class SwingView extends JPanel implements ArenaView {
 
 	private Arena view;
 	
+	private Palette palette = null;
+	
 	public SwingView(int cellSize) {
 
-		this.cellSize = cellSize;
-		
 		setDoubleBuffered(true);
 
-		flag = getFlagGlyph(cellSize);
-		
+		setCellSize(cellSize);
 	}
 	
 	public SwingView() {
@@ -83,40 +102,29 @@ public class SwingView extends JPanel implements ArenaView {
 
 	}
 
-	@Override
-	public void paint(Graphics g) {
-		super.paint(g);
-
-		if (this.view == null)
-			return;
+	protected void paintBackground(Graphics g, Arena view) {
 		
-		Arena view = null;
-		synchronized (this) {
-			
-			view = this.view;
-
-		}
-
-		Color color = null;
-
+		Palette p = palette == null ? grassPalette : palette;
+		
 		for (int j = 0; j < view.getHeight(); j++) {
 
 			for (int i = 0; i < view.getWidth(); i++) {
 
 				int base = view.getBaseTile(i, j);
 
-				if (base >= Arena.TILE_GRASS_0 && base <= Arena.TILE_GRASS_9) {
-					color = grassColors[base - Arena.TILE_GRASS_0];
-				}
-
-				g.setColor(color);
+				g.setColor(p.getColor(base));
 
 				g.fillRect(i * cellSize, j * cellSize, cellSize, cellSize);
 
 
 			}
 		}
+	}
+	
+	protected void paintObjects(Graphics g, Arena view) {
 		
+		Color color = null;
+
 		for (int j = 0; j < view.getHeight(); j++) {
 
 			for (int i = 0; i < view.getWidth(); i++) {
@@ -126,9 +134,9 @@ public class SwingView extends JPanel implements ArenaView {
 				if (body >= Arena.TILE_WALL_0 && body <= Arena.TILE_WALL_9) {
 					color = wallColors[body - Arena.TILE_WALL_0];
 					g.setColor(color);
-					g.fillRect(i * cellSize + CELL_BORDER, j * cellSize
-							+ CELL_BORDER, cellSize - 2 * CELL_BORDER,
-							cellSize - 2 * CELL_BORDER);
+					g.fillRect(i * cellSize + cellBorder, j * cellSize
+							+ cellBorder, cellSize - 2 * cellBorder,
+							cellSize - 2 * cellBorder);
 					continue;
 				}
 				
@@ -144,15 +152,15 @@ public class SwingView extends JPanel implements ArenaView {
 				
 				switch (body) {
 				case Arena.TILE_AGENT:
-					g.fillOval(i * cellSize + CELL_BORDER + translateX, j * cellSize
-							+ CELL_BORDER + translateY, cellSize - 2 * CELL_BORDER,
-							cellSize - 2 * CELL_BORDER);
+					g.fillOval(i * cellSize + cellBorder + translateX, j * cellSize
+							+ cellBorder + translateY, cellSize - 2 * cellBorder,
+							cellSize - 2 * cellBorder);
 					break;
 					
 				case Arena.TILE_AGENT_FLAG:
-					g.fillOval(i * cellSize + CELL_BORDER + translateX, j * cellSize
-							+ CELL_BORDER + translateY, cellSize - 2 * CELL_BORDER,
-							cellSize - 2 * CELL_BORDER);
+					g.fillOval(i * cellSize + cellBorder + translateX, j * cellSize
+							+ cellBorder + translateY, cellSize - 2 * cellBorder,
+							cellSize - 2 * cellBorder);
 					g.setXORMode(Color.WHITE);
 					flag.translate(i * cellSize + translateX, j * cellSize + translateY);
 					g.fillPolygon(flag);
@@ -162,9 +170,9 @@ public class SwingView extends JPanel implements ArenaView {
 					
 					
 				case Arena.TILE_HEADQUARTERS:
-					g.fillRect(i * cellSize + CELL_BORDER + translateX, j * cellSize
-							+ CELL_BORDER + translateY, cellSize - 2 * CELL_BORDER,
-							cellSize - 2 * CELL_BORDER);
+					g.fillRect(i * cellSize + cellBorder + translateX, j * cellSize
+							+ cellBorder + translateY, cellSize - 2 * cellBorder,
+							cellSize - 2 * cellBorder);
 					break;
 				case Arena.TILE_FLAG:
 					flag.translate(i * cellSize + translateX, j * cellSize + translateY);
@@ -177,8 +185,33 @@ public class SwingView extends JPanel implements ArenaView {
 
 		}
 
+		
+	}
+	
+	@Override
+	public void paint(Graphics g) {
+		super.paint(g);
+
+		if (this.view == null)
+			return;
+		
+		Arena view = null;
+		synchronized (this) {
+			
+			view = this.view;
+
+		}
+
+		paintBackground(g, view);
+		
+		paintObjects(g, view);
+
 	}
 
+	protected Arena getArena() {
+		return view;
+	}
+	
 	@Override
 	public Dimension getPreferredSize() {
 
@@ -203,6 +236,22 @@ public class SwingView extends JPanel implements ArenaView {
 		
 	}
 
+	public void setCellSize(int cellSize) {
+		
+		this.cellSize = Math.min(64, Math.max(4, cellSize));
+		
+		this.cellBorder = Math.max(1, Math.round((float)this.cellSize * 0.1f));
+		
+		flag = getFlagGlyph(this.cellSize);
+		
+		revalidate();
+		
+	}
+	
+	public int getCellSize() {
+		return cellSize;
+	}
+	
 	public static void open(SwingView panel) {
 
 		JFrame window = new JFrame("Game");
@@ -216,5 +265,9 @@ public class SwingView extends JPanel implements ArenaView {
 		window.pack();
 
 		window.setVisible(true);
+	}
+	
+	public void setBasePallette(Palette p) {
+		palette = p;
 	}
 }

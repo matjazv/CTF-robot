@@ -18,6 +18,8 @@
 package fri.pipt.server;
 
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -27,8 +29,11 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Vector;
 
+import javax.imageio.ImageIO;
+
 import fri.pipt.arena.Arena;
 import fri.pipt.protocol.Position;
+import fri.pipt.server.Game.FlagMode;
 import fri.pipt.server.Team.TeamBody;
 
 public class Field implements Arena {
@@ -103,8 +108,18 @@ public class Field implements Arena {
 			this.offsetY = offsetY;
 		}
 		
+		public BodyPosition(BodyPosition p) {
+			super(p);
+			this.offsetX = p.offsetX;
+			this.offsetY = p.offsetY;
+		}
+		
 		public String toString() {
 			return String.format("Body position: %d, %d offset: %.1f, %.1f", getX(), getY(), offsetX, offsetY);
+		}
+		
+		public boolean hasOffset() {
+			return offsetX != 0 || offsetY != 0;
 		}
 		
 	}
@@ -222,7 +237,7 @@ public class Field implements Arena {
 				
 				int grass = ((int) (Math.random() * 10)) % 9;
 				
-				cells[n++] = new Cell(new Position(i, j), Arena.TILE_GRASS_0 + grass);
+				cells[n++] = new Cell(new Position(i, j), grass);
 				
 			}
 		}
@@ -231,8 +246,7 @@ public class Field implements Arena {
 	
 	public static Field loadFromFile(File f, Game game) throws IOException {
 		
-		int width = 0;
-		int height = 0;
+		Dimension size = null;
 		
 		Vector<Position> walls = new Vector<Position>();
 		
@@ -240,6 +254,59 @@ public class Field implements Arena {
 		
 		Position[] hqs = new Position[25];
 		
+		if (f.toString().endsWith(".field")) {
+			size = loadAscii(f, flags, hqs, walls);
+		} else {
+			size = loadImage(f, flags, hqs, walls);
+		}
+		
+		Field arena = new Field(size.width, size.height);
+		
+		for (Position p : walls) {
+			
+			int wall = Arena.TILE_WALL_0 + ((int) (Math.random() * 10)) % 9;
+			
+			arena.getCell(p.getX(), p.getY()).body = new Wall(wall);
+			
+		}
+		
+		List<Team> teams = game.getTeams();
+		
+		int count = 0;
+
+		if (hqs.length < teams.size())
+			System.out.println("Warning: this map does not contain enough positions for the number of teams declared in the current game!");
+
+		if (count > -1) {
+		
+			for (int i = 0; i < hqs.length; i++) {
+				
+				if (hqs[i] != null && flags[i] != null) {
+
+					Team team = teams.get(count);
+
+					arena.putBody(team.getHeadquarters(), new BodyPosition(hqs[i].getX(), hqs[i].getY()));
+					
+					if (game.getFlagMode() == FlagMode.UNIQUE)
+						arena.putBody(team.newFlag(), new BodyPosition(flags[i].getX(), flags[i].getY()));
+					
+					count++;
+					
+					if (count >= teams.size())
+						break;
+					
+				}
+				
+			}
+		}
+		return arena;
+		
+	}
+	
+	private static Dimension loadAscii(File f, Position[] flags, Position[] hqs, Vector<Position> walls) throws IOException {
+		
+		Dimension dimension = new Dimension(0, 0);
+
 		BufferedReader in = new BufferedReader(new FileReader(f));
 		
 		while (true) {
@@ -250,7 +317,7 @@ public class Field implements Arena {
 				break;
 			
 
-			width = Math.max(width, line.length());
+			dimension.width = Math.max(dimension.width, line.length());
 			
 			for (int i = 0; i < line.length(); i++) {
 				
@@ -263,63 +330,66 @@ public class Field implements Arena {
 					
 					if (Character.isUpperCase(line.charAt(i))) {
 						
-						hqs[index] = new Position(i, height);
+						hqs[index] = new Position(i, dimension.height);
 						
 					} else {
 
-						flags[index] = new Position(i, height);
+						flags[index] = new Position(i, dimension.height);
 						
 					}
 					
 				}
 				
 				if (line.charAt(i) == '#')
-					walls.add(new Position(i, height));
+					walls.add(new Position(i, dimension.height));
 				
 			}
 			
-			height++;
+			dimension.height++;
 			
-		}
+		}	
 		
-		Field arena = new Field(width, height);
+		return dimension;
+	}
+	
+	
+	private static Dimension loadImage(File f, Position[] flags, Position[] hqs, Vector<Position> walls) throws IOException {
 		
-		for (Position p : walls) {
+		BufferedImage src = ImageIO.read(f);
+	
+		for (int j = 0; j < src.getHeight(); j++) {
 			
-			int wall = Arena.TILE_WALL_0 + ((int) (Math.random() * 10)) % 9;
-			
-			arena.getCell(p.getX(), p.getY()).body = new Wall(wall);
-			
-		}
-		
-		List<Team> teams = game.getTeams();
-		
-		int count = teams.size() - 1;
+			for (int i = 0; i < src.getWidth(); i++) {
 
-		if (count > -1) {
-		
-			for (int i = 0; i < hqs.length; i++) {
+				Color color = new Color(src.getRGB(i, j));
 				
-				if (hqs[i] != null && flags[i] != null) {
+				if (color.getRed() == color.getBlue() && color.getRed() == color.getGreen()) {
+					
+					if (color.getRed() < 200) {
+						walls.add(new Position(i, j));
+					}
+					
+					continue;
+				}
+				
+				float[] hsv = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
+				
+				int team = Math.round(hsv[0] * flags.length);
 
-					Team team = teams.get(count);
-					
-					arena.putBody(team.getHeadquarters(), new BodyPosition(hqs[i].getX(), hqs[i].getY()));
-					arena.putBody(team.getFlag(), new BodyPosition(flags[i].getX(), flags[i].getY()));
-					
-					count--;
-					
-					if (count < 0)
-						break;
-					
+				if (hsv[2] > 0.5) {
+					flags[team] = new Position(i, j);
+				} else {
+					hqs[team] = new Position(i, j);
 				}
 				
 			}
+
 		}
-		return arena;
 		
+		
+		
+		return new Dimension(src.getWidth(), src.getHeight());
 	}
-	
 	
 	public int getWidth() {
 		
@@ -470,4 +540,39 @@ public class Field implements Arena {
 		return null;
 	}
 
+	public List<Cell> listEmptyFields(boolean emptyNeighborhood) {
+		
+		Vector<Cell> list = new Vector<Cell>();
+		
+		for (int j = 0; j < height; j++) {
+		
+			for (int i = 0; i < width; i++) {
+				
+				Cell c = cells[j * width + i];
+				
+				if (!c.isEmpty()) continue;
+				
+				if (emptyNeighborhood) {
+					
+					boolean empty = true;
+					
+					for (Cell n : getNeighborhood(i, j)) {
+						
+						empty &= n.isEmpty();
+						
+					}
+					
+					if (!empty)
+						continue;
+						
+				}
+				
+				list.add(c);
+				
+			}
+			
+		}
+		
+		return list;
+	}
 }

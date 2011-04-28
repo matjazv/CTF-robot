@@ -83,7 +83,7 @@ public class Neighborhood implements Serializable, Arena {
 
 	@Override
 	public int getBaseTile(int x, int y) {
-		return Arena.TILE_GRASS_0;
+		return 0;
 	}
 
 	private static transient final Color TEAM_COLOR = Color.BLUE.darker().darker(); 

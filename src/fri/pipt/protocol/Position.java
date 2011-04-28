@@ -45,4 +45,21 @@ public class Position implements Serializable {
 	public String toString() {
 		return String.format("Position: %d, %d", getX(), getY());
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj != null && obj instanceof Position) 
+			return (((Position) obj).x == x && ((Position) obj).y == y);
+		else return false;
+	}
+
+    @Override
+    public int hashCode()
+    {
+        int hash = 17;
+        hash = 31*hash + x;
+        hash = 31*hash + y;
+        return hash;
+    }
+
 }

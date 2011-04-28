@@ -50,49 +50,51 @@ public class Agent extends TeamBody {
 		return id;
 	}
 
-	public void move(Field arena) {
+	public boolean move(Field arena) {
 
 		synchronized (this) {
 
 			if (!isAlive())
-				return;
+				return false;
 
 			BodyPosition position = arena.getPosition(this);
 
 			if (position == null)
-				return;
+				return false;
 
+			float speed = flag != null ? 0.05f : 0.1f;
+			
 			switch (direction) {
 			case DOWN:
-				position.setOffsetY(position.getOffsetY() + 0.1f);
-				if (Math.abs(position.getOffsetY()) < 0.01f) {
+				position.setOffsetY(position.getOffsetY() + speed);
+				if (Math.abs(position.getOffsetY()) < 0.0001f) {
 					position.setOffsetY(0);
 					direction = Direction.NONE;
 				}
 				break;
 			case UP:
-				position.setOffsetY(position.getOffsetY() - 0.1f);
-				if (Math.abs(position.getOffsetY()) < 0.01f) {
+				position.setOffsetY(position.getOffsetY() - speed);
+				if (Math.abs(position.getOffsetY()) < 0.0001f) {
 					position.setOffsetY(0);
 					direction = Direction.NONE;
 				}
 				break;
 			case LEFT:
-				position.setOffsetX(position.getOffsetX() - 0.1f);
-				if (Math.abs(position.getOffsetX()) < 0.01f) {
+				position.setOffsetX(position.getOffsetX() - speed);
+				if (Math.abs(position.getOffsetX()) < 0.0001f) {
 					position.setOffsetX(0);
 					direction = Direction.NONE;
 				}
 				break;
 			case RIGHT:
-				position.setOffsetX(position.getOffsetX() + 0.1f);
-				if (Math.abs(position.getOffsetX()) < 0.01f) {
+				position.setOffsetX(position.getOffsetX() + speed);
+				if (Math.abs(position.getOffsetX()) < 0.0001f) {
 					position.setOffsetX(0);
 					direction = Direction.NONE;
 				}
 				break;
 			default:
-				break;
+				return false;
 			}
 
 			// System.out.printf("%.1f %.1f %s\n", position.getOffsetX(),
@@ -104,8 +106,6 @@ public class Agent extends TeamBody {
 
 				if (c != null) {
 
-					// TODO: kaj se zgodi, ko se zaletita agenta, ki imata oba zastavico!?
-					
 					Body b = c.getBody();
 					if (b instanceof Flag) {
 						if (((Flag) b).getTeam() == getTeam()) {
@@ -114,7 +114,7 @@ public class Agent extends TeamBody {
 
 							flag = (Flag) b;
 
-							return;
+							return true;
 						}
 					}
 					if (b instanceof Headquarters) {
@@ -131,6 +131,7 @@ public class Agent extends TeamBody {
 				die();
 			}
 		}
+		return true;
 
 	}
 

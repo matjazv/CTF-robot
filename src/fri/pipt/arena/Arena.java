@@ -20,17 +20,6 @@ package fri.pipt.arena;
 import java.awt.Color;
 
 public interface Arena {
-
-	public static final int TILE_GRASS_0 = 1024 + 0;
-	public static final int TILE_GRASS_1 = 1024 + 1;
-	public static final int TILE_GRASS_2 = 1024 + 2;
-	public static final int TILE_GRASS_3 = 1024 + 3;
-	public static final int TILE_GRASS_4 = 1024 + 4;
-	public static final int TILE_GRASS_5 = 1024 + 5;
-	public static final int TILE_GRASS_6 = 1024 + 6;
-	public static final int TILE_GRASS_7 = 1024 + 7;
-	public static final int TILE_GRASS_8 = 1024 + 8;
-	public static final int TILE_GRASS_9 = 1024 + 9;
 	
 	public static final int TILE_WALL_0 = 2024 + 0;
 	public static final int TILE_WALL_1 = 2024 + 1;
