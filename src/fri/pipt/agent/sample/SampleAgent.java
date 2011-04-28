@@ -200,7 +200,7 @@ public class SampleAgent extends Agent {
 			}
 
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(1000/200);
 			} catch (InterruptedException e) {
 			}
 

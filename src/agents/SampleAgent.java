@@ -22,10 +22,7 @@ import java.util.Arrays;
 import utils.KnownArena;
 import fri.pipt.agent.Agent;
 import fri.pipt.agent.Membership;
-import fri.pipt.agent.sample.SampleAgent.AgentState;
-import fri.pipt.agent.sample.SampleAgent.Decision;
 import fri.pipt.protocol.Neighborhood;
-import fri.pipt.protocol.Position;
 import fri.pipt.protocol.Message.Direction;
 
 // Run: java -cp bin fri.pipt.agent.Agent localhost fri.pipt.agent.sample.SampleAgent
@@ -117,20 +114,24 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		case CALM:
 			switch (state) {
 			case EXPLORE:
+				decideOnExplore();
 				break;
 			case RETURN: {
 				decideOnReturn();
 				break;
 			}
 			case SEEK: {
+				decideOnSeek();
 				break;
 			}
 			}
 			break;
 		
 		case AXIS_NEAR:
+			decideOnAxisNear();
 			break;
 		case ALLIES_NEAR:
+			decideOnAlliesNear();
 			break;
 		}
 		
@@ -142,6 +143,26 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		
 	}
 	
+	private void decideOnAlliesNear() {
+	// TODO Auto-generated method stub
+	
+}
+
+	private void decideOnAxisNear() {
+	// TODO Auto-generated method stub
+	
+}
+
+	private void decideOnSeek() {
+	// TODO Auto-generated method stub
+	
+}
+
+	private void decideOnExplore() {
+	// TODO Auto-generated method stub
+	
+}
+
 	private void decideOnReturn() {
 	// TODO Auto-generated method stub
 		// pomnoi smrerem  Decision left, right, up, down, still  
@@ -157,16 +178,17 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 	@Override
 	public void state(int stamp, Neighborhood neighborhood, Direction direction,
 			boolean hasFlag) {
-
-		this.neighborhood = neighborhood;
-		this.direction = direction;
 		
 		if ( this.knownArena == null) {
 			knownArena = new KnownArena(neighborhood);
 		}
-		else if ( direction == Direction.NONE )
+		else if ( direction == Direction.NONE ) {
+			knownArena.updatePosition(this.direction);
 			knownArena.updateArena(neighborhood);
+		}
 		
+		this.neighborhood = neighborhood;
+		this.direction = direction;
 		
 		if (state != AgentState.RETURN && hasFlag)
 			state = AgentState.RETURN;
@@ -178,7 +200,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 
 	@Override
 	public void terminate() {
-
+		knownArena = null;
 	}
 
 
@@ -191,7 +213,11 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 			try {
 
 				scanAndWait();
-				move(updateDecisions(neighborhood, state).getDirection());
+				//if (direction == Direction.NONE) move(updateDecisions(neighborhood, state).getDirection());
+				if (direction == Direction.NONE) {
+					move(Direction.DOWN);
+					direction = Direction.DOWN;
+				}
 
 			} catch (InterruptedException e) {
 				e.printStackTrace();
@@ -235,8 +261,15 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 
 	@Override
 	public void initialize() {
-		// TODO Auto-generated method stub
+		left = new Decision(0, Direction.LEFT);
+		right = new Decision(0, Direction.RIGHT);
+		up = new Decision(0, Direction.UP);
+		down = new Decision(0, Direction.DOWN);
+		still = new Decision(0, Direction.NONE);
 		
+		decisions = new Decision[] {
+			left, right, up, down, still	
+		};
 	}
 	
 	
