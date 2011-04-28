@@ -18,29 +18,129 @@
 package agents;
 
 import java.util.Arrays;
-import java.util.HashMap;
 
+import utils.KnownArena;
 import fri.pipt.agent.Agent;
 import fri.pipt.agent.Membership;
-import fri.pipt.arena.TerminalView;
+import fri.pipt.agent.sample.SampleAgent.AgentState;
+import fri.pipt.agent.sample.SampleAgent.Decision;
 import fri.pipt.protocol.Neighborhood;
 import fri.pipt.protocol.Position;
 import fri.pipt.protocol.Message.Direction;
 
 // Run: java -cp bin fri.pipt.agent.Agent localhost fri.pipt.agent.sample.SampleAgent
 
-@Membership("losers")
+@Membership("samples")
 public class SampleAgent extends Agent {
 
 	private static enum AgentState {
 		EXPLORE, SEEK, RETURN
 	}
+	
+	private static enum AgentReactState {
+		CALM, ALLIES_NEAR, AXIS_NEAR
+	}
+	
 	private AgentState state = AgentState.EXPLORE;
+	private AgentReactState react = AgentReactState.CALM;
+	
+	
 	private Direction direction;
+	private KnownArena knownArena;
 	private Neighborhood neighborhood;
+	
+	
 	private Object waitMutex = new Object();
 
+	private Decision left, right, up, down, still;
+	
+	private Decision[] decisions;
+	
+	protected static class Decision implements Comparable<Decision> {
 
+		private float weight;
+
+		private Direction direction;
+
+		public float getWeight() {
+			return weight;
+		}
+
+		public void setWeight(float weight) {
+			this.weight = weight;
+		}
+		
+		public void multiplyWeight(float f) {
+			this.weight *= f;
+		}
+		
+		public Direction getDirection() {
+			return direction;
+		}
+
+		public void setDirection(Direction direction) {
+			this.direction = direction;
+		}
+
+		public Decision(float weight, Direction direction) {
+			super();
+			this.weight = weight;
+			this.direction = direction;
+		}
+
+		@Override
+		public int compareTo(Decision o) {
+			if (weight < o.weight)
+				return -1;
+
+			if (weight > o.weight)
+				return 1;
+
+			return 0;
+		}
+
+		public String toString() {
+			return String.format("%s (%.2f)", direction.toString(), weight);
+		}
+		
+	}
+	
+private Decision updateDecisions(Neighborhood n, AgentState state) {
+		
+		still.setWeight(0.01f);
+		down.setWeight(canMove(n, 0, 1, state) ? 1 : 0);
+		up.setWeight(canMove(n, 0, -1, state) ? 1 : 0);
+		left.setWeight(canMove(n, -1, 0, state) ? 1 : 0);
+		right.setWeight(canMove(n, 1, 0, state) ? 1 : 0);
+		
+		switch (this.react) {
+		case CALM:
+			switch (state) {
+			case EXPLORE:
+				break;
+			case RETURN: {
+				break;
+			}
+			case SEEK: {
+				break;
+			}
+			}
+			break;
+		
+		case AXIS_NEAR:
+			break;
+		case ALLIES_NEAR:
+			break;
+		}
+		
+		
+		
+		Arrays.sort(decisions);
+		
+		return decisions[decisions.length - 1];
+		
+	}
+	
 	@Override
 	public void receive(int from, byte[] message) {
 
@@ -53,7 +153,14 @@ public class SampleAgent extends Agent {
 
 		this.neighborhood = neighborhood;
 		this.direction = direction;
-
+		
+		if ( this.knownArena == null) {
+			knownArena = new KnownArena(neighborhood);
+		}
+		else
+			knownArena.updateArena(neighborhood);
+		
+		
 		if (state != AgentState.RETURN && hasFlag)
 			state = AgentState.RETURN;
 
@@ -77,10 +184,7 @@ public class SampleAgent extends Agent {
 			try {
 
 				scanAndWait();
-
-				arena.update(neighborhood);
-
-				analyzeNeighborhood(neighborhood);
+				move(updateDecisions(n, state));
 
 			} catch (InterruptedException e) {
 				e.printStackTrace();
@@ -107,43 +211,6 @@ public class SampleAgent extends Agent {
 
 	}
 
-	private void analyzeNeighborhood(Neighborhood n) {
-
-		for (int i = -n.getSize(); i <= n.getSize(); i++) {
-
-			for (int j = -n.getSize(); j <= n.getSize(); j++) {
-
-				if (n.getCell(i, j) == Neighborhood.FLAG) {
-
-					System.out.println("Found flag !!!");
-					
-					registry.put("flag", new Position(x + i, y + j));
-
-					state = AgentState.SEEK;
-
-					continue;
-				}
-
-				if (n.getCell(i, j) == Neighborhood.HEADQUARTERS) {
-
-					registry.put("hq", new Position(x + i, y + j));
-					
-					continue;
-				}
-
-				if (n.getCell(i, j) > 0) {
-
-					if (i != 0 && j != 0)
-						send(n.getCell(i, j), "Hello " + n.getCell(i, j) + "!");
-					
-					continue;
-				}
-				
-			}
-
-		}
-
-	}
 
 	
 	private boolean canMove(Neighborhood n, int x, int y, AgentState state) {
@@ -156,6 +223,12 @@ public class SampleAgent extends Agent {
 		default:
 			return n.getCell(x, y) == Neighborhood.EMPTY;		
 		}
+		
+	}
+
+	@Override
+	public void initialize() {
+		// TODO Auto-generated method stub
 		
 	}
 	
