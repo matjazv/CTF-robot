@@ -17,6 +17,7 @@
  */
 package agents;
 
+import java.beans.DesignMode;
 import java.util.Arrays;
 
 import utils.KnownArena;
@@ -213,10 +214,9 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 			try {
 
 				scanAndWait();
-				//if (direction == Direction.NONE) move(updateDecisions(neighborhood, state).getDirection());
 				if (direction == Direction.NONE) {
-					move(Direction.DOWN);
-					direction = Direction.DOWN;
+					direction = updateDecisions(neighborhood, state).getDirection();
+					move(direction);
 				}
 
 			} catch (InterruptedException e) {
