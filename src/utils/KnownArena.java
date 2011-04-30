@@ -7,8 +7,8 @@ import fri.pipt.protocol.Position;
 import fri.pipt.protocol.Message.Direction;
 
 public class KnownArena {
-	private Position curentPosition;
-	private HashMap<Position, Integer> arena;
+	public Position curentPosition;
+	public HashMap<Position, Integer> arena;
 
 	public KnownArena(Neighborhood nbh) {
 		this.curentPosition = getRelativePosition(nbh);
