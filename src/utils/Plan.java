@@ -1,16 +1,15 @@
 package utils;
 
-import java.util.LinkedList;
 import java.util.PriorityQueue;
 
 import fri.pipt.protocol.Neighborhood;
 import fri.pipt.protocol.Position;
 
-class Plan implements Comparable<Plan> {
-	Plan parent;
-	int f;
-	double h;
-	Position p;
+public class Plan implements Comparable<Plan> {
+	public Plan parent;
+	public int f;
+	public double h;
+	public Position p;
 
 	public Plan(Position p) {
 		this.parent = null;
@@ -36,18 +35,12 @@ class Plan implements Comparable<Plan> {
 				+ Math.pow(p1.getY() - p2.getY(), 2));
 	}
 
-	public int length() {
-		if (parent == null)
-			return 1;
-		return parent.length() + 1;
-	}
-
 	public static Plan createPlan(KnownArena knownArena, Position pos,
 			int maxLength, boolean force) {
 		PriorityQueue<Plan> pq = new PriorityQueue<Plan>();
 
-		if ((knownArena.arena.get(pos) != Neighborhood.EMPTY && !force)
-				|| knownArena.arena.get(pos) == null) {
+		if (knownArena.arena.get(pos) == null
+				|| (knownArena.arena.get(pos) != Neighborhood.EMPTY && !force)) {
 			return null;
 		}
 
@@ -59,7 +52,7 @@ class Plan implements Comparable<Plan> {
 			par = pq.poll();
 			if (par.p.equals(knownArena.curentPosition))
 				return par;
-			if (par.length() > maxLength)
+			if (par.f > maxLength)
 				continue;
 			temPos = new Position(par.p.getX() + 1, par.p.getY());
 			if (canMove(knownArena, temPos))
@@ -79,10 +72,18 @@ class Plan implements Comparable<Plan> {
 	}
 
 	public static boolean canMove(KnownArena knownArena, Position pos) {
-		if (knownArena.arena.get(pos) != Neighborhood.EMPTY
-				|| knownArena.arena.get(pos) == null) {
+		if (knownArena.arena.get(pos) == null
+				|| knownArena.arena.get(pos) != Neighborhood.EMPTY) {
 			return false;
 		}
 		return true;
+	}
+
+	public void print() {
+		System.out.println(p.toString());
+		if (parent != null) {
+			parent.print();
+		}
+		
 	}
 }

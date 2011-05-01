@@ -20,10 +20,12 @@ package agents;
 import java.beans.DesignMode;
 import java.util.Arrays;
 
+import utils.Plan;
 import utils.KnownArena;
 import fri.pipt.agent.Agent;
 import fri.pipt.agent.Membership;
 import fri.pipt.protocol.Neighborhood;
+import fri.pipt.protocol.Position;
 import fri.pipt.protocol.Message.Direction;
 
 // Run: java -cp bin fri.pipt.agent.Agent localhost fri.pipt.agent.sample.SampleAgent
@@ -159,10 +161,36 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 	
 }
 
-	private void decideOnExplore() {
-	// TODO Auto-generated method stub
+	class Explore {
+		Plan plan;
+		Position p;
+	}
 	
+	private Explore explore;
+	private void decideOnExplore() {
+		if (this.explore == null) this.explore = new Explore();
+		Position pos = new Position(-2,-2);
+		if (this.explore.plan == null  || !this.explore.p.equals(knownArena.curentPosition) ) {
+			this.explore.plan = Plan.createPlan(knownArena, pos, 100, false);
+		}
+		this.explore.plan.print();
+		this.explore.p = this.explore.plan.p; 
+		this.explore.plan = mulDirection(this.explore.plan);
 }
+	
+	private Plan mulDirection(Plan p) {
+		if (p.parent == null) return null;
+		if (p.parent.p.getX() - p.p.getX()  == 1) {
+			this.right.multiplyWeight(2);
+		} else if (p.parent.p.getX() - p.p.getX()  == -1) {
+			this.left.multiplyWeight(2);
+		} else if (p.parent.p.getY() - p.p.getY()  == 1) {
+			this.down.multiplyWeight(2);
+		} else if (p.parent.p.getY() - p.p.getY()  == -1) {
+			this.up.multiplyWeight(2);
+		}
+		return p.parent;
+	}
 
 	private void decideOnReturn() {
 	// TODO Auto-generated method stub
