@@ -155,10 +155,19 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 	// TODO Auto-generated method stub
 	
 }
-
+	private Explore seek;
 	private void decideOnSeek() {
-	// TODO Auto-generated method stub
-	
+		if (knownArena.landmarks.get(Neighborhood.FLAG) == null) {
+			state = AgentState.EXPLORE;
+			decideOnExplore();
+		}
+		if (this.seek == null) this.seek = new Explore();
+		if (this.seek.plan == null  || !this.seek.p.equals(knownArena.curentPosition) ) {
+			this.seek.plan = Plan.createPlan(knownArena, knownArena.landmarks.get(Neighborhood.FLAG), 10000, true);
+		}
+		//this.explore.plan.print();
+		this.seek.p = this.seek.plan.p; 
+		this.seek.plan = mulDirection(this.seek.plan);
 }
 
 	class Explore {
@@ -173,7 +182,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		if (this.explore.plan == null  || !this.explore.p.equals(knownArena.curentPosition) ) {
 			this.explore.plan = Plan.createPlan(knownArena, pos, 100, false);
 		}
-		this.explore.plan.print();
+		//this.explore.plan.print();
 		this.explore.p = this.explore.plan.p; 
 		this.explore.plan = mulDirection(this.explore.plan);
 }
@@ -192,10 +201,15 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		return p.parent;
 	}
 
+	private Explore ret;
 	private void decideOnReturn() {
-	// TODO Auto-generated method stub
-		// pomnoi smrerem  Decision left, right, up, down, still  
-		// this.left.multiplyWeight(  nekaTvojaUtez ) - ne oyiraj se na to ali se lahko tja premakne ali ne
+		if (this.ret == null) this.ret = new Explore();
+		if (this.ret.plan == null  || !this.ret.p.equals(knownArena.curentPosition) ) {
+			this.ret.plan = Plan.createPlan(knownArena, knownArena.landmarks.get(Neighborhood.HEADQUARTERS), 10000, true);
+		}
+		//this.explore.plan.print();
+		this.ret.p = this.ret.plan.p; 
+		this.ret.plan = mulDirection(this.ret.plan);
 }
 
 	@Override
@@ -219,9 +233,15 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		this.neighborhood = neighborhood;
 		this.direction = direction;
 		
-		if (state != AgentState.RETURN && hasFlag)
+		
+		if (knownArena.landmarks.get(Neighborhood.FLAG) != null) {
+			state = AgentState.SEEK;
+		}
+		if (state != AgentState.RETURN && hasFlag) {
 			state = AgentState.RETURN;
-
+		}
+		
+			
 		synchronized (waitMutex) {
 			waitMutex.notify();
 		}
