@@ -19,7 +19,10 @@ package agents;
 
 import java.beans.DesignMode;
 import java.util.Arrays;
+import java.util.PriorityQueue;
+import java.util.Vector;
 
+import utils.BestPos;
 import utils.Plan;
 import utils.KnownArena;
 import fri.pipt.agent.Agent;
@@ -175,16 +178,34 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		Position p;
 	}
 	
+	
+	
 	private Explore explore;
 	private void decideOnExplore() {
-		if (this.explore == null) this.explore = new Explore();
-		Position pos = new Position(-2,-2);
-		if (this.explore.plan == null  || !this.explore.p.equals(knownArena.curentPosition) ) {
-			this.explore.plan = Plan.createPlan(knownArena, pos, 100, false);
+		if (this.explore == null) this.explore = new Explore();		
+		
+		if (this.explore.plan == null && !knownArena.toVisit.isEmpty()) {// || !this.explore.p.equals(knownArena.curentPosition) ) {
+			
+			Vector<BestPos> tmp = new Vector<BestPos>();
+			for ( BestPos bp :  knownArena.toVisit) {
+				this.explore.plan = Plan.createPlan(knownArena, bp.p , 100, false);
+				tmp.add(bp);
+				if ( this.explore.plan != null ) {
+					//this.explore.plan.print();
+					//System.out.print("\n\n");
+					break;
+				}
+			}
+			for (BestPos bp : tmp) {
+				knownArena.toVisit.remove(bp);
+				knownArena.visited.add(bp.p);
+			}
 		}
-		//this.explore.plan.print();
-		this.explore.p = this.explore.plan.p; 
-		this.explore.plan = mulDirection(this.explore.plan);
+		
+		if (this.explore.plan != null) {
+			this.explore.p = this.explore.plan.p;
+			this.explore.plan = mulDirection(this.explore.plan);
+		}
 }
 	
 	private Plan mulDirection(Plan p) {

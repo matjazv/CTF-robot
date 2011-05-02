@@ -2,7 +2,7 @@
 
 #Gameplay options
 #The speed of the gameplay (optional)
-gameplay.speed=10
+gameplay.speed=100
 #The arena file to load (required)
 gameplay.field=example.field
 #The maximum number of agents per team (optional)
@@ -14,7 +14,7 @@ gameplay.respawn=30
 #Maximum personal message size (optional)
 message.size=256
 #The size of the neighborhood scan (N * 2 +1)
-message.neighborhood=3
+message.neighborhood=9
 
 #Team specification
 #Each team description contains three definitions
