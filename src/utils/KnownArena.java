@@ -104,23 +104,25 @@ public class KnownArena {
 		}
 	}
 
-	public int getUnknown(Position p) {
-		if (this.arena.get(p) == null)
-			return 0;
+	public void getUnknown(BestPos p) {
+		if (this.arena.get(p.p) == null) {
+			p.mark = 0;
+			return;
+		}
 		int res = 0;
-		int mX = p.getX() + nSize;
-		int mY = p.getY() + nSize;
+		int mX = p.p.getX() + nSize;
+		int mY = p.p.getY() + nSize;
 		Position tp = new Position(0,0);
-		for (int x = p.getX() - nSize; x <= mX; x++) {
-			for (int y = p.getY() - nSize; y <= mY; y++) {
+		for (int x = p.p.getX() - nSize; x <= mX; x++) {
+			for (int y = p.p.getY() - nSize; y <= mY; y++) {
 				tp.setX(x);
 				tp.setY(y);
-				if (arena.get(p) == null) {
+				if (arena.get(tp) == null) {
 					res++;
 				}
 			}
 		}
-		return res;
+		p.mark = res;
 	}
 
 }

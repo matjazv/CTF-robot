@@ -16,11 +16,11 @@ public class BestPos implements Comparable<BestPos> {
 	
 	@Override
 	public int compareTo(BestPos o) {
-		return this.mark/(this.distance > 3 ? 2 : 1) - o.mark/(o.distance> 3 ? 2 : 1);
+		return (int) -((this.mark*10000/this.distance) - (o.mark*10000/o.distance));
 	}
 
 	public boolean eval(KnownArena knownArena) {
-		this.mark = knownArena.getUnknown(p);
+		knownArena.getUnknown(this);
 		if (this.mark <= minMark) return true;
 		distance = Math.sqrt(Math.pow(knownArena.curentPosition.getX() - p.getX(), 2)
 				+ Math.pow(knownArena.curentPosition.getY() - p.getY(), 2));
