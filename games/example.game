@@ -14,7 +14,7 @@ gameplay.respawn=30
 #Maximum personal message size (optional)
 message.size=256
 #The size of the neighborhood scan (N * 2 +1)
-message.neighborhood=3
+message.neighborhood=4
 
 #Team specification
 #Each team description contains three definitions

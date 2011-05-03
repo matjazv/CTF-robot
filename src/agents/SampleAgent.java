@@ -188,7 +188,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 			
 			Vector<BestPos> tmp = new Vector<BestPos>();
 			for ( BestPos bp :  knownArena.toVisit) {
-				this.explore.plan = Plan.createPlan(knownArena, bp.p , 100, false);
+				this.explore.plan = Plan.createPlan(knownArena, bp.p , 10, false);
 				tmp.add(bp);
 				if ( this.explore.plan != null ) {
 					//this.explore.plan.print();

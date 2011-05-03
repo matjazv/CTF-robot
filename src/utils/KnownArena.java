@@ -44,7 +44,7 @@ public class KnownArena {
 								|| n.getCell(x, y) == Neighborhood.FLAG || n
 								.getCell(x, y) == Neighborhood.OTHER_FLAG))
 					this.arena.put(temp,Neighborhood.EMPTY);
-				else if (n.getCell(x, y) != -100000) {
+				else if (n.getCell(x, y) != -100000 && !this.arena.containsKey(temp)) {
 					this.arena.put(temp, n.getCell(x, y));
 					if (n.getCell(x, y) == Neighborhood.FLAG || n.getCell(x, y) == Neighborhood.HEADQUARTERS) {
 						this.landmarks.put(n.getCell(x, y), temp);
