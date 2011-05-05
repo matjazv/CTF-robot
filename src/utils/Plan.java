@@ -1,10 +1,8 @@
 package utils;
 
-import java.sql.Time;
-import java.util.HashMap;
+
 import java.util.HashSet;
 import java.util.PriorityQueue;
-import java.util.Timer;
 
 import fri.pipt.protocol.Neighborhood;
 import fri.pipt.protocol.Position;
