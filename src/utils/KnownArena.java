@@ -1,7 +1,6 @@
 package utils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,6 +16,9 @@ public class KnownArena {
 	public HashMap<Integer, Position> landmarks;
 	public HashSet<Position> visited;
 	public Vector<BestPos> toVisit;
+	
+	//public Vector  allies;
+	//public Vector<Position> axis;
 	public int nSize;
 
 	public KnownArena(Neighborhood nbh) {
@@ -119,6 +121,8 @@ public class KnownArena {
 				tp.setY(y);
 				if (arena.get(tp) == null) {
 					res++;
+				} else if (arena.get(tp) == Neighborhood.WALL) {
+					p.nearWall += Math.sqrt(Math.sqrt(Math.pow(tp.getX() - p.p.getX(), 2) + Math.pow(tp.getY() - p.p.getY(), 2)));
 				}
 			}
 		}

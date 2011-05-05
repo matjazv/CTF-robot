@@ -1,0 +1,7 @@
+gameplay.field=maze.png
+gameplay.agents=20
+gameplay.speed=100
+gameplay.respawn=30
+message.size=256
+message.neighborhood=3
+team1=samples

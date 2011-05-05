@@ -1,6 +1,10 @@
 package utils;
 
+import java.sql.Time;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.PriorityQueue;
+import java.util.Timer;
 
 import fri.pipt.protocol.Neighborhood;
 import fri.pipt.protocol.Position;
@@ -31,13 +35,21 @@ public class Plan implements Comparable<Plan> {
 	}
 
 	private double h(Position p1, Position p2) {
-		return Math.sqrt(Math.pow(p1.getX() - p2.getX(), 2)
-				+ Math.pow(p1.getY() - p2.getY(), 2));
+		return Math.abs(p1.getX() - p2.getX())
+		+ Math.abs(p1.getY() - p2.getY());
 	}
-
+	
+	@Override
+	public int hashCode() {
+		p.hashCode();
+		return super.hashCode();
+	}
+ 
 	public static Plan createPlan(KnownArena knownArena, Position pos,
-			int maxLength, boolean force) {
+			int maxLength, boolean force, int timeOut) {
+		long t = System.currentTimeMillis();
 		PriorityQueue<Plan> pq = new PriorityQueue<Plan>();
+		HashSet<Position> visited = new HashSet<Position>();
 
 		if (knownArena.arena.get(pos) == null
 				|| (knownArena.arena.get(pos) != Neighborhood.EMPTY && !force)) {
@@ -45,7 +57,7 @@ public class Plan implements Comparable<Plan> {
 		}
 
 		pq.add(new Plan(pos));
-
+		visited.add(pos);
 		Plan par = null;
 		Position temPos = null;
 		while (!pq.isEmpty()) {
@@ -55,17 +67,28 @@ public class Plan implements Comparable<Plan> {
 			if (par.f > maxLength)
 				continue;
 			temPos = new Position(par.p.getX() + 1, par.p.getY());
-			if (canMove(knownArena, temPos))
+			if (canMove(knownArena, temPos) && !visited.contains(temPos)) {
+				visited.add(temPos);
 				pq.add(new Plan(par, temPos, knownArena.curentPosition));
+			}
 			temPos = new Position(par.p.getX() - 1, par.p.getY());
-			if (canMove(knownArena, temPos))
+			if (canMove(knownArena, temPos) && !visited.contains(temPos)) {
+				visited.add(temPos);
 				pq.add(new Plan(par, temPos, knownArena.curentPosition));
+			}
 			temPos = new Position(par.p.getX(), par.p.getY() + 1);
-			if (canMove(knownArena, temPos))
+			if (canMove(knownArena, temPos) && !visited.contains(temPos)) {
+				visited.add(temPos);
 				pq.add(new Plan(par, temPos, knownArena.curentPosition));
+			}
 			temPos = new Position(par.p.getX(), par.p.getY() - 1);
-			if (canMove(knownArena, temPos))
+			if (canMove(knownArena, temPos) && !visited.contains(temPos)) {
+				visited.add(temPos);
 				pq.add(new Plan(par, temPos, knownArena.curentPosition));
+			}
+			if (System.currentTimeMillis() - t > timeOut) {
+				return null;
+			}
 		}
 
 		return null;

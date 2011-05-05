@@ -5,6 +5,7 @@ import fri.pipt.protocol.Position;
 public class BestPos implements Comparable<BestPos> {
 
 	public Position p;
+	double nearWall;
 	int mark;
 	double distance;
 	
@@ -16,7 +17,7 @@ public class BestPos implements Comparable<BestPos> {
 	
 	@Override
 	public int compareTo(BestPos o) {
-		return (int) -((this.mark*10000/this.distance) - (o.mark*10000/o.distance));
+		return (int) -((this.mark*10000/(this.distance+(this.nearWall/o.distance))) - (o.mark*10000/(o.distance+(o.nearWall/o.distance))));
 	}
 
 	public boolean eval(KnownArena knownArena) {

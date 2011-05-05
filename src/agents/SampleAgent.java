@@ -166,7 +166,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		}
 		if (this.seek == null) this.seek = new Explore();
 		if (this.seek.plan == null  || !this.seek.p.equals(knownArena.curentPosition) ) {
-			this.seek.plan = Plan.createPlan(knownArena, knownArena.landmarks.get(Neighborhood.FLAG), 10000, true);
+			this.seek.plan = Plan.createPlan(knownArena, knownArena.landmarks.get(Neighborhood.FLAG), 10000, true, 200);
 		}
 		//this.explore.plan.print();
 		this.seek.p = this.seek.plan.p; 
@@ -188,7 +188,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 			
 			Vector<BestPos> tmp = new Vector<BestPos>();
 			for ( BestPos bp :  knownArena.toVisit) {
-				this.explore.plan = Plan.createPlan(knownArena, bp.p , 10, false);
+				this.explore.plan = Plan.createPlan(knownArena, bp.p , 15, false, 100);
 				tmp.add(bp);
 				if ( this.explore.plan != null ) {
 					//this.explore.plan.print();
@@ -226,7 +226,11 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 	private void decideOnReturn() {
 		if (this.ret == null) this.ret = new Explore();
 		if (this.ret.plan == null  || !this.ret.p.equals(knownArena.curentPosition) ) {
-			this.ret.plan = Plan.createPlan(knownArena, knownArena.landmarks.get(Neighborhood.HEADQUARTERS), 10000, true);
+			this.ret.plan = Plan.createPlan(knownArena, knownArena.landmarks.get(Neighborhood.HEADQUARTERS), 10000, true, 150);
+			if (this.ret.plan == null) {
+				decideOnExplore();
+				return;
+			}
 		}
 		//this.explore.plan.print();
 		this.ret.p = this.ret.plan.p; 
