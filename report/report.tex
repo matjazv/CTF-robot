@@ -1,0 +1,373 @@
+
+\documentclass[12pt,a4paper,openany]{book}
+
+%Uporabljeni paketi
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage[slovene]{babel}
+
+\usepackage[cp1250]{inputenc}
+\usepackage[pdftex,bookmarks=true]{hyperref} %omogo?a zaznamke
+
+%Velikost strani - dvostransko
+\oddsidemargin 1.4cm
+\evensidemargin 0.35cm
+\textwidth 14cm
+\topmargin 0.26cm
+\headheight 0.6cm
+\headsep 1.5cm
+\textheight 20cm
+
+%Nastavitev glave in repa strani
+\pagestyle{fancy}
+\fancyhead{}
+\renewcommand{\chaptermark}[1]{\markboth{\textsf{Poglavje \thechapter:\ #1}}{}}
+\renewcommand{\sectionmark}[1]{\markright{\textsf{\thesection\  #1}}{}}
+\fancyhead[RE]{\leftmark}
+\fancyhead[LO]{\rightmark}
+\fancyhead[LE,RO]{\thepage}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0.0pt}
+\renewcommand{\footrulewidth}{0.0pt}
+
+%********************************************
+
+\begin{document}
+
+% stran 1 med uvodnimi listi
+\thispagestyle{empty} 
+
+\begin{center}
+{\large 
+UNIVERZA V LJUBLJANI\\
+FAKULTETA ZA RAÈUNALNITVO IN INFORMATIKO\\
+}
+
+ \includegraphics[scale=0.2,keepaspectratio=true]{./pictures/uni_logo.png}
+
+\vspace{1.5cm}
+{\LARGE Rok Kek}\\
+
+\vspace{2cm}
+\textsc{\textbf{\LARGE 
+Testiranje stopnje asociativnosti predpomnilnika
+in vpliv na hitrost izvajanje programov\\ 
+}}
+
+\vspace{2cm}
+{ SEMINARSKA NALOGA}\\
+{ NA UNIVERZITETNEM TUDIJU }\\
+
+\vspace{2cm} 
+{\Large Mentor: prof. dr. Nikolaj Zimic}
+
+\vfill
+{\Large Ljubljana, 2010}
+\end{center}
+
+\newpage
+
+%********************************************
+
+\renewcommand\thepage{} 
+\tableofcontents 
+\renewcommand\thepage{\arabic{page}}
+
+\thispagestyle{empty}
+
+
+%********************************************
+
+\chapter*{Seznam uporabljenih kratic in simbolov}
+
+\thispagestyle{empty}
+
+\textbf{LRU} (Least Recently Used): Menjalna strategija, pri kateri menjamo blok, ki ni bil v uporabi najdalj èasa.\\
+\textbf{MRU} (Most Recently Used): Menjalna strategija, pri kateri menjamo blok, ki je bil nazadnje uporabljen.\\
+\textbf{RR} (Random Replacement): Menjalna strategija, pri kateri nakljuèno izberemo blok ki ga bomo menjali.\\
+\textbf{L1} : Predpomnilnik na prvem nivoju\\
+\textbf{L2} : Predpomnilnik na drugem nivoju\\
+\textbf{LFU} (Least-Frequently Usedt): Menjalna strategija, pri kateri menajmo blok, ki je bil najmanjkrat uporabljen.
+%\cleardoublepage
+
+\clearpage{\pagestyle{empty}\cleardoublepage}
+
+%********************************************
+%zacno se glavni listi, ki so numerirani z arabskimi stevilkami
+
+\setcounter{page}{1}
+\pagenumbering{arabic}
+
+\chapter*{Povzetek}
+
+\addcontentsline{toc}{chapter}{Povzetek}
+
+V seminarski nalogi sem testiral stopnjo asociativnosti predpomnilnika oziroma njen vpliv na hitrost izvajanje programov. Teste sem
+izvajal na prenosnem raèunalniku nijega cenovnega razreda. Za testiranje sem napisal program, v programskem jeziku C in teste poganjal,
+na Linux operaciskem sistemu. Programski jezik C sem si izbral zato, ker je dovolj nizkonivojski, da lahko izklapljamo prekinitve, in
+omogoèimo pogoje za testiranje takih detailov procesorja. Linux operaciski sistem pa pa zato, ker je odprtokoden, in je zanj veè dokumentacije
+o sami implementaciji sisteme ter knjinic za delo s strojno opremo. Program sem sprva elel napisati kot modul za jedro, vendar sem kasneje 
+ugotovil, da so funkcije, ki jih potrebujem za testiranje pravtako dostopne tudi v uporabnikem naèinu.\\
+Testiral sem le L1 predpomnilnik, ker ima le ta harv in harvardsko arhitekturo, torej je loèen podatkovni in ukazni predpomnilnik.
+Èe bi testiral L2 bi se zgodilo da bi se bloki ukazov in podatkov prekrivali, in nebi mogli izvesti toènih meritev.
+\\
+Za oblikovanje tega dokumenta je bil uporabljen sistem \LaTeX.
+
+\vspace{1.3cm}
+\noindent
+{\large \bf Kljuène besede:}
+
+\vspace{0.5cm}
+\noindent
+Predpomnilnik, asociativnost, pomnilnika hirearhija, testiranje.
+
+
+
+%********************************************
+
+\chapter{Predpomnilnik}
+
+\section{Kaj je predpomnilnik}
+Predpomnilnik je majhen a hiter pomnilnik, ki je navadno blizu centralne procesne enote. V novejih procesorjih je kar vgrajen v isto integrirano vezje, kot procesor. 
+Namen predpomnilnika je zmananje dostopnih èasov do pomnilnika. V predpomnilniku so shranjene kopije delov glavnega pomnilnika, ki so pogosteje v uporabi. Vse skupaj 
+sestavlja tako imenovano pomnilniko hirearhijo. Bolj ko je odstotek pomnilnikih dostopov, ki so predpomnjeni visok, tem bolj se zakasnitev dostopa do pomnilnika  pribljiuje
+zakasnitvi predpomnilnika. Ko centralna procesna enota potrebuje dostopati do glavnega pomnilnika, najprej preveri, èe je sluèajno na voljo kopija v predpomnilniku. Èe pride do
+takoimenovanega zadetka v predpomnilniku procesor takoj dostopa do lokacije, ki je predpomnjena, kar je veliko hitreje od dostopa do glavnega pomnilnika. Vse skupaj je mogoèe 
+zato ker so na podlagi analiz programske opreme ugotovili, da pride do takoimenovane prostorske lokalnosti pomnilnikih dostopov. Prostosrska lokalnost pomeni, da je velika verjetnost
+da so dostopi, do pomnilnikih lokaci tesno skupaj. Primeri so zanke in tabele.
+
+\section{Vrste predpomnilnikov} 
+Glede na naèin realizacije loèimo veè tipov predpomnilnikov. Pomnilniki so realizirani na veè naèinov zato, ker smo omejeni s ceno reitvije in zaradi prostora, ki nam je na voljo
+na silicijevi ploèici, kar posledièno vpliva na tevilo tranzistorjev. Dejansko smo omejeni e zaradi drugih razlogov, kar pa presega obseg seminarske naloge. Bolj zahteven bralec
+si dodatne razloge poièe v \cite{Kodek2000}. Poznamo direktne, asociativne, setasociativne in psevdoasociativne predpomnilnike. 
+
+\subsection{Direktni predpomnilnik}
+Direktni predpomnilnik je najceneji in najpreprosteji za realizacijo. Doloèen blok iz glavnega pomnilnika se lahko preslika v toèno doloèen
+blok v predpomnilniku. Preslikav se naredi na podlagi spodnjih pomnilnikih naslovov. Tako se pri manjih predpomnilnikih zgodi, pride do prekrivanja.
+Do prekrivanja pride, ko elimo dostopati do naslova, ki ma enake spodnje pomnilnike naslove kot predpomnjena pomnilnika lokacija. Enake spodnje bite naslova pa imajo vsi naslovi,
+ki so med seboj razmaknjeni za velikost predpomnilnika. Tukaj se e jasno vidi, da imamo problem pri dalih zankah, oziroma zankah, ki so dalje od velikosti predpomnlnika.
+Tukaj je, kot dolinska mera miljeno tevilo ukazov znotraj zanke. Vidimo, da lahko problem reimo z poveèanjem velikosti predpomnika.
+
+\subsection{Asociativni predpomnilnik}
+Pri asociativnem ali èisttem asociativnem predpomnilniku, se doloèen blok iz glavnega predpomnilnika preslika v poljuben blok v predpomnilnik. Ker preslikava ni odvisna le od spodnjih
+bitov naslova prekrivanja tukaj nimamo. Kaj kmalu pa se nam zgodi, da se nam predpomnilnik zapolni in potrebojemo odstraniti predpomnjen blok, da ga naredimo prostor za nov blok do katerega
+trenutno dostopamo. Pri teh zamenjavah imamo veè razliènih strategij, najpogosteje sem opisal na stani \pageref{strategija_menjave}. 
+
+\subsection{Set-asociativni predpomnilnik}
+Set-asociativni predpomnilnik je nakakna posploitev direktnega in èistega asociativnega predpomnika. Ravno tako, kot pri direktnem predpomnilniku se bolok preslika glede na spodnje bite
+dostopanega naslova, vendar pa si pri setasociativne lahko predstavljamo, da nam ti biti predstavljajo naslov èistega asociativnega pomnilnika v katerega naj se preslika. Primerjavo set-asociativnega in direktnega pomnilnika si lahko ogledate na sliki \ref{slika_primerjava}. Velikost enega 
+od teh èistih asociativnih pomnilnikov imenujemo stopnja asociativnosti. Hitro lahko vidimo, da pri stopnji asociativnosti ena dobimo kar direktni pomnilnik. In obratno, pri stopnji asociativnosti,
+ki je enaka tevilu blokov v predpomnilnikov, dobimo èisti asociativni predpomnilnik. Analogno, kot pri asociativnem pomnilniku prihaja znotraj teh majnih asociativnih predpomnilnikov do
+zamenjav blokov, torej tudi tukaj se potrebujemo odloèati o zamenjevalni stategiji, katere sem opisal na stani \pageref{strategija_menjave}. Veèina dananjih procesorjev ima vgrajene prav setasociativne
+predpomnilnike, zato ker predstavljajo nek kompromis med omejitvami in zmogljivostmi. Na sliki \ref{slika_missrate} imamo prikazano
+odvisnost reciproèna vrednost delaa predpomnjenih blokov z velikostjo pomnilnika, za razliène vreste predopmnilnikov.
+
+\begin{figure}[htb]
+ \centering
+ \includegraphics[width=13cm]{./cache_associative.png}
+ % cache_associative.png: 546x271 pixel, 51dpi, 27.31x13.56 cm, bb=0 0 774 384
+ \caption[Primerjava preslilikovanja]{Primerjava preslilikovanja pri direktnem in set-asociativnem predpomniku}
+ \label{slika_primerjava}
+\end{figure}
+
+\subsection{Pseudo asociativni predpomnilnik}
+Pri njem poteka dostop do pomnilnika podobno kot pri direktnem, èe imamo zadetek, ni nobene razlike. Ta se pojavi ob zgreitvi. Namesto, da se v predpomnilnik prenese nov blok, se pri pseudo asociativnem naredi e en poizkus dostopa, tokrat do pseudo bloka.
+Pseudo associativni predpomnilnik je podoben set asociativnemu z dvema blokoma v setu. Razlika je v tem, da je pri zadetku èas dostopa
+do pseudo bloka dalji od èasa dostopa do prvega bloka.
+
+\begin{figure}[htb]
+ \centering
+ \includegraphics[width=13cm,keepaspectratio=true]{./cache_missrate.pdf}
+ % cache_missrate.svg: 400x320 pixel, 72dpi, 14.11x11.29 cm, bb=0 0 400 320
+ \caption[Dele zgreitev glede na velikost predpomnilnika]{Dele zgreitev glede na velikost predpomnilnika na SPEC CPU2000.}
+ \label{slika_missrate}
+\end{figure}
+
+
+\label{strategija_menjave}
+\section{Strategije menjave bloka}
+Ko je predpomnilnik polen, mora algoritem izbrati kateri blok naj zavre da naredi prostor novemu bloku.\\
+Odstotek zadetkov ali "hit rate" predpomnilnika opisuje kako pogosto je dostopan naslov dejansko predpomnjen. Uèinkoviteje menjalne
+stategije beleijo informacio o uporabi bloka, da izbolajo odstotek zadetkov.\\
+Zakasnitev "latency" predpomnilnika opisuje koliko èasa potrebuje predpomnilnik, da prenese eljeno pomnilniko lokacijo dejnasko v
+procesor. Zaksnitev se poveèuje z kompleksnostjo strategije.\\
+Vsaka menjalna strategija je kompromis med odstotkom zadetkov in zakasnitvijo.
+
+\subsection{Belady-jev algoritem}
+Je najbolj uèinkovit algoritem za menjavanje blokov, saj algoritem vedno zavre blok, ki ne bo veè potrebovan najdalj èasa. Optimalni
+rezultat je imenovan Belady-jev algoritem. Ker je v splonem nemogoèe napovedati, kdaj bomo spet potrebovali doloèen blok, je algoritem nemogoèe implementirati, uporablja pa se za primerjavo uèinkovitosti drugih algoritmov.
+
+\subsection{LRU algoritem}
+Ta algoritem zavre blok, ki ni bil v uporabi nadalj èasa. Algoritem potrebuje hraniti in posodabljati informacijo o tem, kateri blok
+je bil kdaj uporabljen, kar pa je lahko èasovno potratno. Ponavadi implementacije tega algoritma zahtevajo tako imenovane starostne bite "age bits" za vsak blok "cache-line" v predpomnilniku. Pri takih implementacijah, vakiè ko dostopamo do doloèenega bloka
+spremenimo starost vsem ostalim blokom. LRU je v bistvu druina menjalnih algoritmov.
+
+\subsection{MRU algoritem}
+Ta algoritem, v nasprotju z LRU, zavre blok, ki je bil nazadnje dostopan. V knjigi \cite{VLDB1} "Ko je datoteka ponovlivo dostopna
+[Zanke], je MRU najbolji menjalni algoritem". MRU algoritem je nadvse uporaben v situacijah kjer stareji je blok bolj verjetno bo
+dostopan.
+
+\subsection{Pseudo-LRU}
+Za predpomnilnike z visoko stopnjo asociativnosti, navadno vijo od tiri, postanejo stroki implementaacije LRU algoritma previsoki.
+Je strategija oziroma implementacija algoritma, ki skoraj vedno ugotovi blok, ki najdalj èasa ni bil dostopan, zadovoljiva.
+
+\subsection{RR algoritem}
+Algoritem nakljuèno izbere blok, ki naj bo zamenjan. Algoritem ne zahteve nobene informacije o zgodovini dostopov. Zaradi preprostosti
+je uporabljen v ARM procesorjih.
+
+\subsection{LFU algoritem}
+Algoritem teje kako pogosto dostopamo do nekega naslova. Tisti naslovi, ki so najmanjkrat dostopani, tiste bloke algoritem najprej zavre.
+
+\chapter{Metode in testiranje}
+
+\section{Specifikacije raèunalnika} 
+Testiral sem na prenosnem raèunalniku, procesor je nijega cenovnega razreda. Samo specifikacijo procesorja lahko vidite na sliki \ref{slika_spec}. Slika je pridobljena z programskim orodjem CPU-Z. Katerega sem tudi uporabil za pridobitev prièakovanih rezultatov.
+
+\begin{figure}[htb]
+ \centering
+ \includegraphics[width=8cm,keepaspectratio=true]{./CPU-Z_CPU.png}
+ % CPU-Z_CPU.png: 409x394 pixel, 96dpi, 10.82x10.43 cm, bb=0 0 307 296
+ \caption{Specifikacija procesorja}
+ \label{slika_spec}
+\end{figure}
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{|l||l|}\hline
+\textbf{Parameter}& \textbf{Vrednost parametra}\\\hline\hline
+CPU	 & Intel M353\\\hline
+Frekvenca& 900 Mhz\\\hline
+Predpomnilnik L2& 512 kB\\\hline
+Glavni pomnilnik & 2 GB\\\hline
+Trdi disk & 160 GB\\\hline
+\end{tabular}
+\end{center}
+\caption[Specifikacija raèunalnika.]{Specifikacija raèunalnika.}
+\label{tabela_mere}
+\end{table}
+
+\section{Strategija testiranja} 
+Najprej sem predpostavil, da je pomnilnik set asociativen brez kaknih psevdo izvedb. Druga stvar, ki sem jo predpostavil pa je
+da je menjalna strategija LRU.\\
+Ob teh predpostavkah sem se odloèil, da bom dostopal do blokov sekvenèno po zaporednih naslovih, pri takih dostopih se LRU metoda
+izkae za zelo slabo, saj bi se morali menjati vsi bloki, v primeru, ko dostopamo do veè blokov, kot je stopnaja asociativnosti.
+Tukaj seeveda mislimo bloke katerih se spodnji naslovi prekrivajo. V nasprotnem primeru, ko dostopamo do manj razliènih blokov, kot
+je stopnaj asociativnosti, pa do menjave sploh ne prihaja. Tako imamo zgreitev v predpomnilniku le na zaèetku, ko e ni nobenega bloka
+v predpomniku. Razmerje teh zaèetnih zakasnitev pa gre z veèjim tevilom dostopov proti niè.
+
+\section{Prièakovani rezultati} 
+Prièakujemo torej, da za tiste teste, pri katerih je tevilo razliènih blokov, do katerih dostopamo, manje ali enako, stopnji asociativnosti, je povpreèen èas
+dostopa kar pribljino enak dostopu do L1. Izpeljavo lahko vidimo v spodnjih enaèbah.
+
+\begin{table}
+\begin{equation}
+t_A = \lim{n \rightarrow \infinity}{ \frac{n*t_{L1} +  C*t_{L2}}{n}}            
+\end{equation}\\
+\begin{equation}
+t_A = \lim_{n \rightarrow \inf}{ \frac{n*t_{L1}}{n} +  \frac{C*t_{L2}}{n}}         
+\end{equation}\\
+\begin{equation}
+t_A = t_{L1} + 0            
+\end{equation}\\
+\begin{equation}
+t_A = t_{L1}            
+\end{equation}
+\end{table}
+
+V enaèbi lahko opazimo konstanto $C$. Ta konstanta nam pove do koliko razliènih blokov dostopamo.\\
+Nasprotno, za tiste teeste, pri katerih je tevilo razliènih blokov, do katerih dostopamo, veèje od stopnje asociativnosti, pa bi moral èas dostopa $T_A$
+ustrezati spodnji enaèbi. Saj je potrebno ves èas menjavati bloke (Po nai predpostavki LRU).
+
+\begin{table}
+\begin{equation}
+t_A = \lim{n \rightarrow \infinity}{ \frac{n*(t_{L1}+t_{L2})}{n}}            
+\end{equation}\\
+\begin{equation}
+t_A = t_{L1}+t_{L2}           
+\end{equation}
+\end{table}
+
+
+\chapter{Rezultati}
+
+\section{Izpis programa}
+Program poenemo za veè predpostavljenih stopenj. Pri predpostavljeni stopnji, ki je manja oziroma enaka realni, prièakujemo podobne
+dostopne èase. Ko pa preseemo mejo realne stopnje asociativnosti pa bi moral èas narasti. Izpis programa prikazuje slika \ref
+
+\section{Razlaga}
+Opazimo, da se dobljen rezultat razlikuje od prièakovanih. Razlog za to so seveda nae zaèetne predpostavke. Ker je raèunalnik nijega
+cenovnega razreda 
+
+
+\subsection{Sklepne ugotovitve}
+
+Sklepne ugotovitve naj prika?ejo oceno o opravljenem delu in povzamejo te?ave, na katere je naletel kandidat. Kot rezultat dela
+lahko navede ideje, ki so nastale med delom, in bi lahko bile predmet novih raziskav.
+
+
+\newpage
+
+%********************************************
+
+\appendix
+
+%\addcontentsline{toc}{chapter}{\protect Dodatki}
+
+\chapter{Koda uporabljena za testiranje}
+
+\lstinputlisting[
+language=C,
+showspaces=false,
+showstringspaces=false,
+frame=lines,
+keywordstyle=\color{blue},
+commentstyle=\color{darkgreen},
+stringstyle=\color{red},
+breaklines=true,
+breakatwhitespace=false,
+title=\lstname,
+basicstyle=\footnotesize\ttfamily\small,
+emph={label},
+morekeywords={asm}]
+{testl1.c} 
+
+\newpage
+
+\addcontentsline{toc}{chapter}{Seznam slik}
+\addtocontents{toc}{\protect\vspace{-2ex}}
+\listoffigures
+
+\newpage
+
+\addcontentsline{toc}{chapter}{Seznam tabel}
+\listoftables
+
+%\listofalgorithms
+
+
+%********************************************
+
+\newpage
+
+\addcontentsline{toc}{chapter}{Literatura}
+\label{stran_literatura}
+
+\begin{thebibliography}{99}
+
+\bibitem{Kodek2000} D. Kodek, ``Predpomnilnik'' 
+\textit{Arhitektura Raèunalnikih Sistemov}, Ljubljana: BI-TIM, januar 2000, str. 314-346.
+
+\bibitem{VLDB1} Hong-Tai Chou and David J. Dewitt, \textit{An Evaluation of Buffer Management Strategies for Relational Database Systems}, VLDB, 1985.
+Dostopno na:\\
+http://www.vldb.org/conf/1985/P127.PDF
+
+
+
+
+\end{thebibliography}
+
+
+\end{document}
