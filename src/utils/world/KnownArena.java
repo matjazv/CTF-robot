@@ -8,14 +8,22 @@ import fri.pipt.protocol.Neighborhood;
 import fri.pipt.protocol.Message.Direction;
 
 public class KnownArena {
+	
+	private static KnownArena ARENA;
+	
+	public static KnownArena getARENA() {
+		return ARENA;
+	}
+
 	private HashMap<KnownPosition, KnownPosition> arena;
 	//private HashMap<Integer, KnownPosition> landmarks;
 	
-	KnownPosition curentPosition;
+	private KnownPosition curentPosition;
 	
 	private int nSize;
 	
 	public KnownArena (Neighborhood neighborhood) {
+		
 		this.nSize = neighborhood.getSize();
 		this.curentPosition = getRelativePosition(neighborhood);
 		this.arena = new HashMap<KnownPosition, KnownPosition>();
@@ -26,8 +34,15 @@ public class KnownArena {
 				updateCell(x+curentPosition.getX(), y+curentPosition.getY(), neighborhood.getCell(x, y));
 			}
 		}
+		
+		ARENA = this;
 	}
 	
+	public KnownPosition getCurentPosition() {
+		return curentPosition;
+	}
+
+
 	public void updateCell(int x, int y, int type) {
 		if (getPositionAt(x, y) != null) return;
 		
@@ -104,5 +119,21 @@ public class KnownArena {
 	
 	public KnownPosition getPositionAt(int x, int y) {
 		return this.arena.get(new KnownPosition(x,y,0));
+	}
+	
+	public KnownPosition getPositionAt(KnownPosition position) {
+		return this.arena.get(position);
+	}
+
+	public boolean canMove(KnownPosition position) {
+		if (this.getPositionAt(position) == null
+				|| this.getPositionAt(position).getType() != Neighborhood.EMPTY) {
+			return false;
+		}
+		return true;
+	}
+
+	public HashMap<KnownPosition, KnownPosition> getArena() {
+		return arena;
 	}
 }
