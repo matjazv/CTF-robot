@@ -6,7 +6,7 @@ import fri.pipt.protocol.Neighborhood;
 public class KnownPosition implements Comparable<KnownPosition> {
 	
 	public enum CompareType {
-		GROUP
+		EXPLORE
 	}
 	
 	private static CompareType compareType;
@@ -23,21 +23,8 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	
 	private Group group;
 	
-	public long getGroup() {
-		return group.getGroup();
-	}
-	
-	public Group getGroupObject() {
+	public Group getGroup() {
 		return group;
-	}
-	
-	public void setGroup(Group group) {
-		this.group = group;
-	}
-
-	public void setGroup(long group) {
-		if (this.group == null) this.group = new Group();
-		this.group.setGroup(group);
 	}
 	
 	public void setGroup() {
@@ -121,8 +108,8 @@ public class KnownPosition implements Comparable<KnownPosition> {
     public Color getColor() {
     	switch (this.type) {
     	case Neighborhood.EMPTY:
-    		int  group = 1 + (int)(this.group.getGroup()%15);
-    		return new Color(9*group, 120+9*group, 9*group);
+    		int  group = this.group.isConnected() ? 0 : 50;
+    		return new Color(group, 120+group, group);
     	case Neighborhood.WALL:
     		return Color.GRAY;
     	case Neighborhood.HEADQUARTERS:
@@ -141,9 +128,8 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	@Override
 	public int compareTo(KnownPosition position) {
 		switch(compareType) {
-		case GROUP:
-			long l = this.getGroup() - position.getGroup();
-			return l < 0 ? -1 : (l == 0 ? 0 : 1); 
+		case EXPLORE:
+			
 		}
 		return 0;
 	}
@@ -151,4 +137,7 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	public static void setCompareType(CompareType compareType) {
 		KnownPosition.compareType = compareType;
 	}
+
+	
+	
 }

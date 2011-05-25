@@ -16,7 +16,7 @@ public class KnownArenaView extends JFrame {
 	private KnownArena arena;
 	private utils.world.KnownArena ka;
 	private static final int maxArena = 82; //
-	private static final int size = 2;
+	private static final int size = 6;
 	
 	/**
 	 * 

@@ -1,10 +1,8 @@
 package utils.world;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Vector;
 
-import utils.world.KnownPosition.CompareType;
 
 import fri.pipt.protocol.Neighborhood;
 import fri.pipt.protocol.Message.Direction;
@@ -21,7 +19,7 @@ public class KnownArena {
 		this.nSize = neighborhood.getSize();
 		this.curentPosition = getRelativePosition(neighborhood);
 		this.arena = new HashMap<KnownPosition, KnownPosition>();
-		curentPosition.setGroup(Group.FIRST);
+		curentPosition.setGroup();
 		setPositionAt(curentPosition.getX(), curentPosition.getY(), curentPosition);
 		for (int x = -neighborhood.getSize(); x <= neighborhood.getSize(); x++) {
 			for (int y = -neighborhood.getSize(); y <= neighborhood.getSize(); y++) {
@@ -36,29 +34,23 @@ public class KnownArena {
 		KnownPosition tempPositionI = new KnownPosition(x,y,type);
 		setPositionAt(x, y, tempPositionI);
 		if (tempPositionI.getType() == Neighborhood.EMPTY) {
-			Vector<KnownPosition> tempNeighbors = new Vector<KnownPosition>();
+			
+			Vector<Group> neighborGroups = new Vector<Group>();
+			
+			
 			KnownPosition tempPositionN = getPositionAt(x+1, y);
-			if (tempPositionN != null && tempPositionN.getType() == Neighborhood.EMPTY) tempNeighbors.add(tempPositionN);
+			if (tempPositionN != null && tempPositionN.getType() == Neighborhood.EMPTY) neighborGroups.add(tempPositionN.getGroup());
 			tempPositionN = getPositionAt(x-1, y);
-			if (tempPositionN != null && tempPositionN.getType() == Neighborhood.EMPTY) tempNeighbors.add(tempPositionN);
+			if (tempPositionN != null && tempPositionN.getType() == Neighborhood.EMPTY) neighborGroups.add(tempPositionN.getGroup());
 			tempPositionN = getPositionAt(x, y+1);
-			if (tempPositionN != null && tempPositionN.getType() == Neighborhood.EMPTY) tempNeighbors.add(tempPositionN);
+			if (tempPositionN != null && tempPositionN.getType() == Neighborhood.EMPTY) neighborGroups.add(tempPositionN.getGroup());
 			tempPositionN = getPositionAt(x, y-1);
-			if (tempPositionN != null && tempPositionN.getType() == Neighborhood.EMPTY) tempNeighbors.add(tempPositionN);
+			if (tempPositionN != null && tempPositionN.getType() == Neighborhood.EMPTY) neighborGroups.add(tempPositionN.getGroup());
 			
-			KnownPosition.setCompareType(CompareType.GROUP);
-			Collections.sort(tempNeighbors);
+			tempPositionI.setGroup();
+			neighborGroups.add(tempPositionI.getGroup());
+			Group.connect(neighborGroups);
 			
-			if (tempNeighbors.size() > 0) {
-				Group tempGroup = tempNeighbors.get(0).getGroupObject();
-				for (KnownPosition position : tempNeighbors) {
-					position.setGroup(tempGroup.getGroup());
-				}
-				tempPositionI.setGroup(tempGroup);
-			}
-			else {
-				tempPositionI.setGroup();
-			}
 		}
 	}
 	
