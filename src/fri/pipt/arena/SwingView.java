@@ -244,6 +244,13 @@ public class SwingView extends JPanel implements ArenaView {
 		
 		flag = getFlagGlyph(this.cellSize);
 		
+		synchronized (this) {
+	
+			if (this.view != null)
+				this.size = new Dimension(view.getWidth() * cellSize, view.getHeight()
+						* cellSize);
+		}
+		
 		revalidate();
 		
 	}

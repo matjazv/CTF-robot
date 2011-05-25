@@ -17,6 +17,9 @@
  */
 package fri.pipt.server;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import fri.pipt.arena.Arena;
 import fri.pipt.protocol.Message.Direction;
 import fri.pipt.server.Field.Body;
@@ -38,7 +41,7 @@ public class Agent extends TeamBody {
 
 	private boolean alive = true;
 
-	private Flag flag = null;
+	private Set<Flag> flags = new HashSet<Flag>();
 
 	public Agent(Team team, int id) {
 
@@ -62,7 +65,13 @@ public class Agent extends TeamBody {
 			if (position == null)
 				return false;
 
-			float speed = flag != null ? 0.05f : 0.1f;
+			float weight = 1;
+			
+			for (Flag flag : flags) {
+				weight += flag.getWeight();
+			}
+			
+			float speed = 0.1f / weight;
 			
 			switch (direction) {
 			case DOWN:
@@ -112,16 +121,17 @@ public class Agent extends TeamBody {
 
 							arena.removeBody(b);
 
-							flag = (Flag) b;
+							flags.add((Flag) b);
 
 							return true;
 						}
 					}
 					if (b instanceof Headquarters) {
 						if (((Headquarters) b).getTeam() == getTeam()) {
-
-							((Headquarters) b).putFlag(flag);
-							flag = null;
+							for (Flag flag : flags)
+								((Headquarters) b).putFlag(flag);
+							
+							flags.clear();
 						}
 					}
 					if (b instanceof Agent) {
@@ -167,13 +177,16 @@ public class Agent extends TeamBody {
 		return direction;
 	}
 
-	public Flag getFlag() {
-		return flag;
+	public boolean hasFlag() {
+		return !flags.isEmpty();
 	}
 	
+	public Set<Flag> getFlags() {
+		return flags;
+	}
 	
 	public int getTile() {
-		return flag == null ? Arena.TILE_AGENT : Arena.TILE_AGENT_FLAG;
+		return flags.isEmpty() ? Arena.TILE_AGENT : Arena.TILE_AGENT_FLAG;
 	}
 
 }

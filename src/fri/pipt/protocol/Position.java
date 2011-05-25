@@ -12,7 +12,6 @@ public class Position implements Serializable {
 	private int x;
 	
 	private int y;
-	
 
 	public int getX() {
 		return x;
@@ -63,4 +62,8 @@ public class Position implements Serializable {
         return hash;
     }
 
+    public static int distance(Position p1, Position p2) {
+		return Math.max(Math.abs(p1.getX() - p2.getX()), Math.abs(p1.getY()
+				- p2.getY()));
+    }
 }

@@ -176,8 +176,13 @@ public class ClientsPanel extends JPanel {
 			
 			ClientPanel panel = clients.remove(client);
 			
-			if (panel != null)
+			if (panel == selected) {
+				ClientsPanel.this.select((Client) null);
+			}
+			
+			if (panel != null) {
 				clientPanel.remove(panel);
+			}
 			
 			//revalidate();
 			clientPanel.repaint();
@@ -378,6 +383,9 @@ public class ClientsPanel extends JPanel {
 			teams.put(t, tp);
 			
 		}
+		
+		setMaximumSize(new Dimension(400, Integer.MAX_VALUE));
+		setMinimumSize(new Dimension(200, 200));
 	}
 	
 	@Override
@@ -405,12 +413,13 @@ public class ClientsPanel extends JPanel {
 			if (selected != null) {
 				selected.deselect();
 			}
-			
-			selected = tp;
+			// Not needed at the moment
+			selected = null;
+			/*selected = tp;
 			tp.select();
 			
 			if (observer != null)
-				observer.teamSelected(tp.team);
+				observer.teamSelected(tp.team);*/
 		}
 
 		
@@ -418,6 +427,16 @@ public class ClientsPanel extends JPanel {
 	}
 	
 	private void select(Client client) {
+		System.out.println(client);
+		if (client == null) {
+			if (selected != null) {
+				selected.deselect();
+				selected = null;
+			}
+			if (observer != null)
+				observer.clientSelected(null);
+			return;
+		}
 		
 		TeamPanel tp = teams.get(client.getTeam());
 		
@@ -426,8 +445,9 @@ public class ClientsPanel extends JPanel {
 	
 		ClientPanel cp = tp.clients.get(client);
 		
-		if (cp == null)
+		if (cp == null) {
 			return;
+		}
 		
 		if (selected != null && selected == cp) {
 			selected.deselect();	
@@ -439,12 +459,13 @@ public class ClientsPanel extends JPanel {
 			if (selected != null) {
 				selected.deselect();
 			}
-			
+
 			selected = cp;
 			cp.select();
 			
 			if (observer != null)
 				observer.clientSelected(cp.client);
+			
 		}
 
 	}

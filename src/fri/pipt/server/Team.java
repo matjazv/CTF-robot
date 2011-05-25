@@ -31,7 +31,7 @@ import fri.pipt.server.Field.BodyPosition;
 
 public class Team {
 
-	private static final int MAX_ID = 10000000;
+	private static final int MAX_ID = (1 << 30) - 1;
 	
 	public static class TeamBody extends Body {
 		
@@ -51,8 +51,15 @@ public class Team {
 	
 	public static class Flag extends TeamBody {
 
-		private Flag(int tile, Team team) {
+		private float weight;
+		
+		private Flag(int tile, Team team, float weight) {
 			super(tile, team);
+			this.weight = weight;
+		}
+		
+		public float getWeight() {
+			return weight;
 		}
 		
 	}
@@ -102,7 +109,7 @@ public class Team {
 		
 		this.name = name;
 		this.color = color;
-		
+
 		hq = new Headquarters(Arena.TILE_HEADQUARTERS, this);
 
 	}
@@ -125,9 +132,9 @@ public class Team {
 		
 	}
 	
-	public Flag newFlag() {
+	public Flag newFlag(float weight) {
 		
-		Flag f = new Flag(Arena.TILE_FLAG, this);
+		Flag f = new Flag(Arena.TILE_FLAG, this, weight);
 		
 		flags.add(f);
 		
@@ -149,7 +156,7 @@ public class Team {
 			client.setAgent(agt);
 			used.add(client);
 			
-			System.out.println("New agent spawned for team: " + name + " (id: " + agt.getId() + ")");
+			Main.log("New agent spawned for team: " + name + " (id: " + agt.getId() + ")");
 			
 			return agt;
 		}
@@ -173,7 +180,7 @@ public class Team {
 	
 	public void removeClient(Client client) {
 		
-		System.out.println("Remove client: " + client);
+		Main.log("Remove client: " + client);
 		
 		if (client == null)
 			return;
@@ -237,8 +244,9 @@ public class Team {
 				
 				field.removeBody(a);
 				
-				if (a.getFlag() != null && pos != null) {
-					field.putBodyCloseTo(a.getFlag(), new BodyPosition(pos.getX(), pos.getY()));
+				if (a.hasFlag() && pos != null) {
+					for (Flag flag : a.getFlags())
+						field.putBodyCloseTo(flag, new BodyPosition(pos.getX(), pos.getY()));
 				}
 			}
 
@@ -296,7 +304,7 @@ public class Team {
 		
 		while (true) {
 		
-		int id = (int) (Math.random() * MAX_ID);
+		int id = Math.max(1, Math.min(MAX_ID, (int) (Math.random() * MAX_ID)));
 		
 			if (!allocatedIds.contains(id)) {
 				allocatedIds.add(id);

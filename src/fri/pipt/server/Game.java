@@ -67,6 +67,8 @@ public class Game {
 
 	private int neighborhoodSize = 10;
 
+	private float flagWeight = 0;
+	
 	private Properties properties = null;
 
 	private File gameSource;
@@ -150,7 +152,7 @@ public class Game {
 
 			game.teams.put(id, new Team(name, colors[index - 1]));
 
-			System.out.println("Registered team: " + id);
+			Main.log("Registered team: " + id);
 
 		}
 
@@ -184,12 +186,14 @@ public class Game {
 
 		}
 
+		game.flagWeight = Math.min(30, Math.max(0, game.getProperty("gameplay.flags.weight", 1f)));
+		
 		game.field = Field.loadFromFile(fldFile, game);
 
 		if (game.flagMode != FlagMode.UNIQUE) {
 			game.spawnNewFlags();
 		}
-
+		
 		return game;
 
 	}
@@ -315,7 +319,7 @@ public class Game {
 
 			int nf = Math.max(0, flagPoolCount - t.getActiveFlagsCount());
 			for (int i = 0; i < nf; i++)
-				flags.add(t.newFlag());
+				flags.add(t.newFlag(getFlagWeight()));
 		}
 
 		Collections.shuffle(flags);
@@ -379,6 +383,7 @@ public class Game {
 					}
 
 					if (c.getBody() instanceof Agent) {
+
 						n.setCell(i, j, t == agent.getTeam() ? ((Agent) c
 								.getBody()).getId() : Neighborhood.OTHER);
 						continue;
@@ -401,6 +406,16 @@ public class Game {
 
 	}
 
+	public boolean getProperty(String key, boolean def) {
+
+		try {
+			return Boolean.parseBoolean(properties.getProperty(key));
+		} catch (Exception e) {
+			return def;
+		}
+
+	}
+	
 	public String getProperty(String key, String def) {
 
 		if (properties.getProperty(key) == null)
@@ -410,6 +425,16 @@ public class Game {
 
 	}
 
+	public float getProperty(String key, float def) {
+
+		if (properties.getProperty(key) == null)
+			return def;
+
+		return Float.parseFloat(properties.getProperty(key));
+
+	}
+
+	
 	public String getName() {
 		if (properties.contains("title"))
 			return properties.getProperty("title");
@@ -439,7 +464,7 @@ public class Game {
 		Client cltfrom = team.findById(from);
 
 		if (from == to) {
-			System.out.printf("Message from %d to %d rejected: same agent\n",
+			Main.log("Message from %d to %d rejected: same agent",
 					from, to);
 			return;
 		}
@@ -448,8 +473,8 @@ public class Game {
 
 			int dst = distance(cltfrom.getAgent(), cltto.getAgent());
 			if (dst > neighborhoodSize || dst < 0) {
-				System.out.printf(
-						"Message from %d to %d rejected: too far away\n", from,
+				Main.log(
+						"Message from %d to %d rejected: too far away", from,
 						to);
 				return;
 			}
@@ -504,6 +529,10 @@ public class Game {
 		return flagMode;
 	}
 
+	public float getFlagWeight() {
+		return flagWeight;
+	}
+	
 	public int getNeighborhoodSize() {
 		return neighborhoodSize;
 	}

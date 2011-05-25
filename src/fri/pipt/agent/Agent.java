@@ -17,9 +17,15 @@
  */
 package fri.pipt.agent;
 
+import java.io.ByteArrayOutputStream;
+import java.io.Flushable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -45,38 +51,123 @@ import fri.pipt.protocol.Message.StateMessage;
 @Membership("default")
 public abstract class Agent {
 
-	private static Class<Agent> agentClass = null;
+	private static Class<Agent> agentClassStatic = null;
 
 	private static Vector<ClientProtocolSocket> clients = new Vector<ClientProtocolSocket>();
+
+	public static class ProxyClassLoader extends ClassLoader {
+		
+		private Set<String> protectedClassPrefixes = new HashSet<String>();
+		
+		public ProxyClassLoader() {
+			super(ProxyClassLoader.class.getClassLoader());
+			
+			protectedClassPrefixes.add("java.");
+			protectedClassPrefixes.add("javax.");
+			protectedClassPrefixes.add("fri.pipt.agent.Agent");
+			protectedClassPrefixes.add("fri.pipt.protocol");
+			protectedClassPrefixes.add("fri.pipt.arena");
+		}
+
+		public Class<?> loadClass(String className)
+				throws ClassNotFoundException {
+			return findClass(className);
+		}
+
+		public Class<?> findClass(String className) {
+			Class<?> result = null;
+			result = (Class<?>) classes.get(className);
+			if (result != null) {
+				return result;
+			}
+
+			try {
+				Class<?> cls = this.findSystemClass(className);
+				
+				for (String prefix : protectedClassPrefixes) {
+					if (className.startsWith(prefix)) {
+						classes.put(className, cls);
+						return cls;	
+					}
+				}
+					
+				
+				String classResource = className.substring(className.lastIndexOf('.')+1) + ".class";
+
+				InputStream in = cls.getResourceAsStream(classResource);
+				ByteArrayOutputStream ba = new ByteArrayOutputStream();
+
+				byte b[] = new byte[1024];
+
+				while (true) {
+					int len = in.read(b);
+					if (len == -1)
+						break;
+					ba.write(b, 0, len);
+				}
+
+				Class<?> cl = defineClass(className, ba.toByteArray(), 0, ba
+						.size());
+
+				classes.put(className, cl);
+
+				return cl;
+
+			} catch (IOException e) {
+
+			} catch (NullPointerException e) {
+			
+			} catch (ClassNotFoundException e) {
+
+			}
+			/*
+			 * try { return findSystemClass(className); } catch (Exception e) {
+			 * }
+			 */
+			return null;
+		}
+
+		private Hashtable<String, Class<?>> classes = new Hashtable<String, Class<?>>();
+	}
 
 	public static enum Status {
 		UNKNOWN, REGISTERED, INITIALIZED
 	}
-	
-	private static class ClientProtocolSocket extends ProtocolSocket implements Runnable {
-		
+
+	private static class ClientProtocolSocket extends ProtocolSocket implements
+			Runnable {
+
 		private ConcurrentLinkedQueue<Message> inbox = new ConcurrentLinkedQueue<Message>();
 
 		private Status status = Status.UNKNOWN;
 
 		private Agent agent = null;
-		
+
 		private boolean terminated = false;
-		
-		public ClientProtocolSocket(Socket sck) throws IOException {
+
+		private String name;
+
+		public ClientProtocolSocket(Socket sck, String name) throws IOException {
 			super(sck);
 
 			String team = "default";
 
-			Membership m = agentClass.getAnnotation(Membership.class);
+			Membership m = agentClassStatic.getAnnotation(Membership.class);
 
 			if (m != null)
 				team = m.value();
 
 			sendMessage(new Message.RegisterMessage(team));
+			
+			this.name = name;
 
 		}
 
+		public String getName() {
+			return name;
+		}
+
+		@SuppressWarnings("unchecked")
 		@Override
 		protected void handleMessage(Message message) {
 
@@ -91,13 +182,18 @@ public abstract class Agent {
 
 					try {
 
+						ProxyClassLoader loader = new ProxyClassLoader();
+
+						Class<Agent> agentClass = (Class<Agent>) loader
+								.loadClass(agentClassStatic.getCanonicalName());
+
 						agent = agentClass.newInstance();
 
 						agent.id = ((Message.InitializeMessage) message)
 								.getId();
 
 						agent.client = this;
-						
+
 						agent.maxMessageSize = ((Message.InitializeMessage) message)
 								.getMaxMessageSize();
 
@@ -164,15 +260,16 @@ public abstract class Agent {
 		@Override
 		protected void onTerminate() {
 			switch (status) {
-			case UNKNOWN: 
-				System.out.println("ERROR: Unable to connect. Did you set the membership information correctly?");
+			case UNKNOWN:
+				System.out
+						.println("ERROR: Unable to connect. Did you set the membership information correctly?");
 				break;
-			case REGISTERED: 
+			case REGISTERED:
 				System.out.println("ERROR: Disconnected by server.");
-				break;	
-			case INITIALIZED: 
+				break;
+			case INITIALIZED:
 				System.out.println("ERROR: Disconnected by server.");
-				break;			
+				break;
 			}
 			super.onTerminate();
 			terminated = true;
@@ -202,13 +299,19 @@ public abstract class Agent {
 							try {
 
 								if (msg instanceof ReceiveMessage) {
-									agent.receive(((ReceiveMessage) msg).getFrom(),
-											((ReceiveMessage) msg).getMessage());
+									agent.receive(((ReceiveMessage) msg)
+											.getFrom(), ((ReceiveMessage) msg)
+											.getMessage());
 								} else if (msg instanceof StateMessage) {
-									agent.state(((StateMessage) msg).getStamp(),
-											((StateMessage) msg).getNeighborhood(),
-											((StateMessage) msg).getDirection(),
-											((StateMessage) msg).hasFlag());
+									agent
+											.state(((StateMessage) msg)
+													.getStamp(),
+													((StateMessage) msg)
+															.getNeighborhood(),
+													((StateMessage) msg)
+															.getDirection(),
+													((StateMessage) msg)
+															.hasFlag());
 								}
 
 							} catch (Exception e) {
@@ -246,43 +349,50 @@ public abstract class Agent {
 	public static void main(String[] args) throws NumberFormatException,
 			UnknownHostException, IOException, ClassNotFoundException {
 
-		agentClass = (Class<Agent>) Class.forName(args[1]);
+		agentClassStatic = (Class<Agent>) Class.forName(args[1]);
 
 		int count = 1;
-		
+
 		if (args.length > 2)
 			count = Integer.parseInt(args[2]);
-		
+
 		for (int i = 0; i < count; i++) {
 			Socket socket = new Socket(args[0], 5000);
+			socket.setTcpNoDelay(true);
+			ClientProtocolSocket client = new ClientProtocolSocket(socket,
+					"Client " + i);
 
-			ClientProtocolSocket client = new ClientProtocolSocket(socket);
-			
-			Thread thread = new Thread(client);
-			thread.start();
-			
-			clients.add(client);
-			
-		}
-
-		while (true) {
-			
-			boolean alive = true;
-			
-			for (ClientProtocolSocket c : clients) {
-				
-				alive &= !c.terminated;
-				
-			}
-			
-			if (!alive) break;
-			
 			try {
 				Thread.sleep(100);
 			} catch (InterruptedException e) {}
 			
+			Thread thread = new Thread(client);
+			thread.setName(client.getName());
+			thread.start();
+
+			clients.add(client);
+
 		}
-		
+
+		while (true) {
+
+			boolean alive = true;
+
+			for (ClientProtocolSocket c : clients) {
+
+				alive &= !c.terminated;
+
+			}
+
+			if (!alive)
+				break;
+
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+			}
+
+		}
 
 		System.exit(0);
 
@@ -295,7 +405,7 @@ public abstract class Agent {
 	private int gameSpeed;
 
 	private ClientProtocolSocket client;
-	
+
 	/**
 	 * Called when the agent is no longer needed.
 	 */
@@ -319,8 +429,9 @@ public abstract class Agent {
 	 */
 	public final void send(int to, byte[] message) {
 
-		if (!isAlive()) return;
-		
+		if (!isAlive())
+			return;
+
 		client.sendMessage(new Message.SendMessage(to, message));
 
 	}
@@ -338,8 +449,9 @@ public abstract class Agent {
 	 */
 	public final void send(int to, String message) {
 
-		if (!isAlive()) return;
-		
+		if (!isAlive())
+			return;
+
 		client.sendMessage(new Message.SendMessage(to, message.getBytes()));
 
 	}
@@ -354,8 +466,9 @@ public abstract class Agent {
 	 */
 	public final void move(Direction direction) {
 
-		if (!isAlive()) return;
-		
+		if (!isAlive())
+			return;
+
 		client.sendMessage(new Message.MoveMessage(direction));
 
 	}
@@ -370,8 +483,9 @@ public abstract class Agent {
 	 */
 	public final void scan(int stamp) {
 
-		if (!isAlive()) return;
-		
+		if (!isAlive())
+			return;
+
 		client.sendMessage(new Message.ScanMessage(stamp));
 
 	}

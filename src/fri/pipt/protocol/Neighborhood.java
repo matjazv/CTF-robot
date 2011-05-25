@@ -59,13 +59,13 @@ public class Neighborhood implements Serializable, Arena {
 	public int getCell(int x, int y) {
 	
 		if (x > size || x < -size || y > size || y < -size)
-			return -100000;
+			return WALL;
 		
 		x += size;
 		y += size;
 		
 
-		return grid[x + y * (2 * size + 1)];
+		return grid[x + y * (2 * size + 1)]; 
 		
 	}
 	
@@ -78,40 +78,6 @@ public class Neighborhood implements Serializable, Arena {
 		y += size;
 		
 		grid[x + y * (2 * size + 1)] = c;
-		
-	}
-	
-	public String toString() {
-		String rez = "\n\n";
-		for ( int i = 0; i < this.grid.length; i++) {
-			switch (this.grid[i]) {
-			case EMPTY:
-				rez += ".";
-				break;
-			case WALL:
-				rez += "#";
-				break;
-			case HEADQUARTERS:
-				rez += "A";
-				break;
-			case FLAG:
-				rez += "F";
-				break;
-			case OTHER_HEADQUARTERS:
-				rez += "B";
-				break;
-			case OTHER_FLAG:
-				rez += "G";
-				break;
-			case OTHER:
-				rez += "O";
-				break;
-			 default:
-				 rez += "X";
-			}
-			if ((i+1)%(2 * size + 1) == 0)  rez += "\n";
-		}
-		return rez;
 		
 	}
 

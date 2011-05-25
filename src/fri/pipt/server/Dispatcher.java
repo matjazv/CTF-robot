@@ -44,18 +44,22 @@ public class Dispatcher implements Runnable {
 		
 		private Agent agent = null;
 		
-		private int messages = 0;
+		private int totalMessages = 0, scanMessages = 0, msgMessages = 0;
 		
 		public Client(Socket socket)
 				throws IOException {
 			super(socket);
+			listeners = new Vector<ClientListener>();
 		}
 		
 		protected void handleMessage(Message message) {
 			
 			synchronized (this) {
-				messages++;
+				totalMessages++;
 			}
+			
+			if (status == null)
+				status = Status.UNKNOWN;
 			
 			switch (status) {
 			case UNKNOWN: {
@@ -66,12 +70,12 @@ public class Dispatcher implements Runnable {
 	
 					if (team == null) {
 						
-						System.out.println("Unknown team: " + ((RegisterMessage) message).getTeam());
+						Main.log("Unknown team: " + ((RegisterMessage) message).getTeam());
 						close();
 						return;
 					}
 	
-					System.out.println("New client joined team " + team + ": " + this);
+					Main.log("New client joined team " + team + ": " + this);
 					
 					sendMessage(new Message.AcknowledgeMessage());
 					
@@ -100,19 +104,23 @@ public class Dispatcher implements Runnable {
 				
 				if (message instanceof ScanMessage) {
 					
+					scanMessages++;
+					
 					Neighborhood n = game.scanNeighborhood(neighborhoodSize, getAgent());
 					
-					sendMessage(new Message.StateMessage(getAgent().getDirection(), n, agent.getFlag() != null));
+					sendMessage(new Message.StateMessage(getAgent().getDirection(), n, agent.hasFlag()));
 					
 					return;
 				}
 				
 				if (message instanceof SendMessage) {
 					
+					msgMessages++;
+					
 					int to = ((SendMessage) message).getTo();
 					
 					if (((SendMessage)message).getMessage() == null || ((SendMessage)message).getMessage().length > maxMessageSize) {
-						System.out.printf("Message from %d to %d rejected: too long", agent.getId(), to);
+						Main.log("Message from %d to %d rejected: too long", agent.getId(), to);
 						return;
 					}
 					
@@ -179,8 +187,10 @@ public class Dispatcher implements Runnable {
 		
 		public int queryMessageCounter() {
 			synchronized (this) {
-				int tmp = messages;
-				messages = 0;
+				int tmp = totalMessages;
+				totalMessages = 0;
+				msgMessages = 0;
+				scanMessages = 0;
 				return tmp;
 			}
 		}
@@ -188,6 +198,9 @@ public class Dispatcher implements Runnable {
 		private Vector<ClientListener> listeners = new Vector<ClientListener>();
 
 		public void addListener(ClientListener listener) {
+			if (listeners == null)
+				listeners = new Vector<ClientListener>();
+			
 			synchronized (listeners) {
 				listeners.add(listener);
 			}
@@ -227,9 +240,9 @@ public class Dispatcher implements Runnable {
 		public void traffic() {
 			
 			synchronized (this) {
-				transfer(messages);
+				transfer(totalMessages);
 				
-				messages = 0;				
+				totalMessages = 0;				
 			}
 
 		}
@@ -291,7 +304,7 @@ public class Dispatcher implements Runnable {
 		while (true) {
 			try {
 				Socket sck = socket.accept();
-				
+				sck.setTcpNoDelay(true);
 				synchronized (clients) {
 					clients.add(new Client(sck));
 				}

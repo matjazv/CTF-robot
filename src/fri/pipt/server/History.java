@@ -137,6 +137,11 @@ public class History implements Serializable, GameListener {
 			
 			h.record(p);
 			
+			// At the moment we do not need to know the location of dead agents.
+			if (p == null) {
+				agents.remove(id);
+			}
+			
 		}
 		
 		public String getTeamName() {

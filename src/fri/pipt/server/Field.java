@@ -25,8 +25,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Vector;
 
 import javax.imageio.ImageIO;
@@ -146,6 +149,103 @@ public class Field implements Arena {
 		
 	}
 	
+	public class CellIterator implements Iterator<Cell> {
+
+		private int x, y;
+		
+		private int radius, offset;
+		
+		private Cell next;
+		
+		public CellIterator(int x, int y) {
+			
+			this.x = x;
+			this.y = y;
+			
+			this.radius = 1;
+			this.offset = 0;
+			
+			next = findNext();
+			
+		}
+		
+		@Override
+		public boolean hasNext() {
+			return next != null;
+		}
+
+		@Override
+		public Cell next() {
+
+			if (next == null)
+				return null;
+			
+			Cell c = next;
+			
+			next = findNext();
+			
+			return c;
+		}
+
+		private Cell findNext() {
+			
+			int direction = offset / (2 * radius);
+			
+			int cx = 0;
+			int cy = 0;
+			
+			int rr = radius;
+			
+			while (true) {
+			
+				switch (direction) {
+				case 0:
+					cx = x - radius + offset;
+					cy = y - radius;
+					break;
+				case 1:
+					cx = x + radius;
+					cy = y - radius + (offset - 2 * radius);
+					break;
+				case 2:
+					cx = x + radius - (offset - 4 * radius);
+					cy = y + radius;
+					break;
+				case 3:
+					cx = x - radius;
+					cy = y + radius - (offset - 6 * radius);
+					break;
+				}
+			
+				Cell c = getCell(cx, cy);
+				
+				offset++;
+				
+				if (offset >= 8 * radius) {
+					
+					offset = 0;
+					radius++;
+					
+					if (radius - rr > 2)
+						return null;
+					
+				}
+				
+				if (c != null) {
+					return c;
+				}
+				
+			}
+			
+		}
+		
+		@Override
+		public void remove() {
+
+		}
+		
+	}
+	
 	public class Cell {
 
 		private Position position;
@@ -216,6 +316,11 @@ public class Field implements Arena {
 			return offsetY;
 		}
 		
+		@Override
+		public String toString() {
+			return String.format("Cell [%d, %d]", position.getX(), position.getY());
+		}
+		
 	}
 	
 	private Hashtable<Body, Cell> positions = new Hashtable<Body, Cell>();
@@ -244,13 +349,17 @@ public class Field implements Arena {
 		
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static Field loadFromFile(File f, Game game) throws IOException {
 		
 		Dimension size = null;
 		
 		Vector<Position> walls = new Vector<Position>();
 		
-		Position[] flags = new Position[25];
+		Set<Position>[] flags = new Set[25];
+		
+		for (int i = 0; i < 25; i++)
+			flags[i] = new HashSet<Position>();
 		
 		Position[] hqs = new Position[25];
 		
@@ -274,21 +383,28 @@ public class Field implements Arena {
 		
 		int count = 0;
 
-		if (hqs.length < teams.size())
-			System.out.println("Warning: this map does not contain enough positions for the number of teams declared in the current game!");
+		int hqcount = 0;
+		for (int i = 0; i < 25; i++) {
+			if (hqs[i] != null) hqcount++;
+		}
+		
+		if (hqcount < teams.size())
+			Main.log("Warning: this map does not contain enough positions for the number of teams declared in the current game!");
 
 		if (count > -1) {
 		
 			for (int i = 0; i < hqs.length; i++) {
 				
-				if (hqs[i] != null && flags[i] != null) {
+				if (hqs[i] != null) {
 
 					Team team = teams.get(count);
 
 					arena.putBody(team.getHeadquarters(), new BodyPosition(hqs[i].getX(), hqs[i].getY()));
 					
-					if (game.getFlagMode() == FlagMode.UNIQUE)
-						arena.putBody(team.newFlag(), new BodyPosition(flags[i].getX(), flags[i].getY()));
+					if (game.getFlagMode() == FlagMode.UNIQUE) {
+						for (Position p : flags[i])
+						arena.putBody(team.newFlag(game.getFlagWeight()), new BodyPosition(p.getX(), p.getY()));
+					}
 					
 					count++;
 					
@@ -303,7 +419,7 @@ public class Field implements Arena {
 		
 	}
 	
-	private static Dimension loadAscii(File f, Position[] flags, Position[] hqs, Vector<Position> walls) throws IOException {
+	private static Dimension loadAscii(File f, Set<Position>[] flags, Position[] hqs, Vector<Position> walls) throws IOException {
 		
 		Dimension dimension = new Dimension(0, 0);
 
@@ -334,7 +450,7 @@ public class Field implements Arena {
 						
 					} else {
 
-						flags[index] = new Position(i, dimension.height);
+						flags[index].add(new Position(i, dimension.height));
 						
 					}
 					
@@ -353,7 +469,7 @@ public class Field implements Arena {
 	}
 	
 	
-	private static Dimension loadImage(File f, Position[] flags, Position[] hqs, Vector<Position> walls) throws IOException {
+	private static Dimension loadImage(File f, Set<Position>[] flags, Position[] hqs, Vector<Position> walls) throws IOException {
 		
 		BufferedImage src = ImageIO.read(f);
 	
@@ -374,10 +490,10 @@ public class Field implements Arena {
 				
 				float[] hsv = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
 				
-				int team = Math.round(hsv[0] * flags.length);
+				int team = Math.min(flags.length - 1, Math.round(hsv[0] * flags.length));
 
 				if (hsv[2] > 0.5) {
-					flags[team] = new Position(i, j);
+					flags[team].add(new Position(i, j));
 				} else {
 					hqs[team] = new Position(i, j);
 				}
@@ -442,6 +558,10 @@ public class Field implements Arena {
 		return c;
 	}
 
+	public CellIterator getCellIterator(int x, int y) {
+		return new CellIterator(x, y);
+	}
+	
 	public boolean putBody(Body body, BodyPosition position) {
 		
 		Cell cell = getCell(position.getX(), position.getY());
@@ -459,11 +579,14 @@ public class Field implements Arena {
 		
 		if (cell == null)
 			return false;
-		
+
 		if (!cell.placeBody(body, 0, 0)) {
-			for (Cell c : getNeighborhood(position.getX(), position.getY())) {
+			
+			CellIterator itr = new CellIterator(position.getX(), position.getY());
+			
+			while (itr.hasNext()) {
 				
-				if (c.placeBody(body, 0, 0))
+				if (itr.next().placeBody(body, 0, 0))
 					return true;
 				
 			}

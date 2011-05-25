@@ -17,14 +17,13 @@
  */
 package agents;
 
-import java.beans.DesignMode;
 import java.util.Arrays;
-import java.util.PriorityQueue;
 import java.util.Vector;
 
 import utils.BestPos;
-import utils.Plan;
 import utils.KnownArena;
+import utils.Plan;
+import utils.world.KnownArenaView;
 import fri.pipt.agent.Agent;
 import fri.pipt.agent.Membership;
 import fri.pipt.protocol.Neighborhood;
@@ -35,7 +34,8 @@ import fri.pipt.protocol.Message.Direction;
 
 @Membership("samples")
 public class SampleAgent extends Agent {
-
+	private KnownArenaView arenaviev;
+	private KnownArenaView arenavievKA;
 	private static enum AgentState {
 		EXPLORE, SEEK, RETURN
 	}
@@ -50,6 +50,7 @@ public class SampleAgent extends Agent {
 	
 	private Direction direction;
 	private KnownArena knownArena;
+	private utils.world.KnownArena ka;
 	private Neighborhood neighborhood;
 	
 	
@@ -242,17 +243,22 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 
 		String msg = new String(message);
 	}
-
 	@Override
 	public void state(int stamp, Neighborhood neighborhood, Direction direction,
 			boolean hasFlag) {
 		
 		if ( this.knownArena == null) {
 			knownArena = new KnownArena(neighborhood);
+			ka = new utils.world.KnownArena(neighborhood);
+			arenaviev = new KnownArenaView(ka);
+			//arenavievKA = new KnownArenaView(knownArena);
 		}
 		else if ( direction == Direction.NONE ) {
 			knownArena.updatePosition(this.direction);
 			knownArena.updateArena(neighborhood);
+			ka.updatePosition(neighborhood, this.direction);
+			arenaviev.repaint();
+			//arenavievKA.repaint();
 		}
 		
 		this.neighborhood = neighborhood;
@@ -283,7 +289,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 	public void run() {
 
 		while (isAlive()) {
-
+			
 			try {
 
 				scanAndWait();

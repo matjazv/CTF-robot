@@ -22,6 +22,7 @@ import java.util.HashMap;
 
 import fri.pipt.agent.Agent;
 import fri.pipt.agent.Membership;
+import fri.pipt.arena.TerminalView;
 import fri.pipt.protocol.Neighborhood;
 import fri.pipt.protocol.Position;
 import fri.pipt.protocol.Message.Direction;
@@ -35,6 +36,8 @@ public class SampleAgent extends Agent {
 		EXPLORE, SEEK, RETURN
 	}
 
+	//private static double TEST = Math.random();
+	
 	private int x = 0;
 
 	private int y = 0;
@@ -70,7 +73,7 @@ public class SampleAgent extends Agent {
 
 		String msg = new String(message);
 
-		System.out.format("Message recived from %d: %s", from, msg);
+		System.out.format("Message recived from %d: %s\n", from, msg);
 
 	}
 
@@ -159,6 +162,8 @@ public class SampleAgent extends Agent {
 
 				analyzeNeighborhood(neighborhood);
 
+				//System.out.printf("%f %s\n", TEST, this.getClass().getClassLoader());
+				
 				System.out.printf("Current position: %d, %d, state: %s \n", x, y, state.toString());
 				
 				if (direction == Direction.NONE) {
@@ -187,6 +192,9 @@ public class SampleAgent extends Agent {
 					
 					Decision d = updateDecisions(neighborhood, state);
 					
+					TerminalView view = new TerminalView();
+					view.update(neighborhood);
+					
 					System.out.printf("Best move: %s %.2f \n", d.getDirection().toString(), d.getWeight());
 					
 					if (d.getDirection() != Direction.NONE) 
@@ -200,7 +208,7 @@ public class SampleAgent extends Agent {
 			}
 
 			try {
-				Thread.sleep(1000/200);
+				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 			}
 
