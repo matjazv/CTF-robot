@@ -2,11 +2,14 @@ package utils.world;
 
 import java.awt.Color;
 
+import utils.BestPos;
+import utils.KnownArena;
+
 import fri.pipt.protocol.Neighborhood;
 public class KnownPosition implements Comparable<KnownPosition> {
 	
 	public enum CompareType {
-		EXPLORE
+		EXPLORE, PLAN
 	}
 	
 	private static CompareType compareType;
@@ -29,6 +32,10 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	
 	public void setGroup() {
 		this.group = new Group();
+	}
+	
+	public boolean isAccesible() {
+		return this.group.isConnected();
 	}
 
 	private int x;
@@ -129,11 +136,32 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	public int compareTo(KnownPosition position) {
 		switch(compareType) {
 		case EXPLORE:
+			return 0;
+		case PLAN:
 			
 		}
 		return 0;
 	}
 
+	
+	// FOR PLANING
+	
+	private int mark;
+	private int distance;
+	private int nearWall;
+	/*
+	public int compareTo(BestPos o) {
+		return (int) -((this.mark*10000/(this.distance+(this.nearWall/o.distance))) - (o.mark*10000/(o.distance+(o.nearWall/o.distance))));
+	}
+
+	public boolean eval(KnownArena knownArena) {
+		knownArena.getUnknown(this);
+		if (this.mark <= minMark) return true;
+		distance = Math.sqrt(Math.pow(knownArena.curentPosition.getX() - p.getX(), 2)
+				+ Math.pow(knownArena.curentPosition.getY() - p.getY(), 2));
+		return false;
+	}
+	*/
 	public static void setCompareType(CompareType compareType) {
 		KnownPosition.compareType = compareType;
 	}

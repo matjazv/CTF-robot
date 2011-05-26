@@ -1,95 +1,62 @@
 package utils.world;
 
 import java.awt.Color;
-import java.awt.Container;
-import java.awt.FlowLayout;
 import java.awt.Graphics;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 
 import javax.swing.JFrame;
 
-import fri.pipt.protocol.Neighborhood;
-import fri.pipt.protocol.Position;
-
-import utils.KnownArena;
-
-public class KnownArenaView extends JFrame {
-	private KnownArena arena;
-	private utils.world.KnownArena ka;
-	private static final int maxArena = 82; //
+public class KnownArenaView extends JFrame implements WindowListener {
+	private static final int maxArena = 82;
 	private static final int size = 6;
-	
-	/**
-	 * 
-	 */
+
 	private static final long serialVersionUID = 1L;
-	public KnownArenaView () {
-		//WindowUtilities.setNativeLookAndFeel();
-	    setTitle("View of Arena");
-	    setSize(400, 150);
-	    Container content = getContentPane();
-	    content.setBackground(Color.white);
-	    content.setLayout(new FlowLayout()); 
-	    setVisible(true);
+
+	public KnownArenaView(utils.world.KnownArena arena) {
+		setTitle("View of Arena");
+		setSize((2 * maxArena + 1) * size, (2 * maxArena + 1) * size);
+		setVisible(true);
+		addWindowListener(this);
 	}
-	
-	public KnownArenaView (KnownArena arena) {
-		this.arena = arena;
-		//WindowUtilities.setNativeLookAndFeel();
-	    setTitle("View of Arena");
-	    setSize((2*maxArena+1)*size, (2*maxArena+1)*size);
-	    Container content = getContentPane();
-	    content.setBackground(Color.white);
-	    content.setLayout(new FlowLayout()); 
-	    setVisible(true);
-	}
-	
-	public KnownArenaView (utils.world.KnownArena arena) {
-		this.ka = arena;
-		//WindowUtilities.setNativeLookAndFeel();
-	    setTitle("View of Arena");
-	    setSize((2*maxArena+1)*size, (2*maxArena+1)*size);
-	    Container content = getContentPane();
-	    content.setBackground(Color.white);
-	    content.setLayout(new FlowLayout()); 
-	    setVisible(true);
-	}
-	
+
 	@Override
 	public void paint(Graphics g) {
-		//super.paint(g);
-		int X =0;
-		int Y = 0;
-		for (int x = - maxArena; x <= maxArena; x++) {
-			for (int y = -maxArena; y <= maxArena; y++) {
-				if (arena != null) 
-				if (arena.arena.get(new Position(x,y)) != null) {
-					switch(arena.arena.get(new Position(x,y))){
-					case Neighborhood.WALL:
-						g.setColor(Color.GRAY);
-						break;
-					case Neighborhood.EMPTY:
-						g.setColor(Color.GREEN);
-						break;
-					} 
-				}else{
-					g.setColor(Color.BLACK);
-				}
-				else if (ka != null ) {
-					if (ka.getPositionAt(x, y) != null)
-						g.setColor(ka.getPositionAt(x, y).getColor());
-					
-					else g.setColor(Color.BLACK);
-				}
-				else g.setColor(Color.BLACK);
-				g.fillRect(X, Y, size, size);
-				Y += size;
-			}
-			Y = 0;
-			X += size;
-		}
 		
+		for (int x = -maxArena; x <= maxArena; x++) {
+			for (int y = -maxArena; y <= maxArena; y++) {
+				paintPosition(g, x, y);
+			}
+		}
+		paintPosition(g, KnownArena.getARENA().getCurentPosition(), Color.MAGENTA);
+
 	}
-	public static void main (String [] args ) {
-		KnownArenaView arena = new KnownArenaView();
+
+	private void paintPosition(Graphics g, KnownPosition position, Color color) {
+		if (position != null) {
+			g.setColor(color);
+			g.fillRect((position.getX() + maxArena) * size, (position.getY() + maxArena) * size, size, size);
+		}
 	}
+
+	private void paintPosition(Graphics g, int x, int y) {
+		KnownPosition position = KnownArena.getARENA().getPositionAt(x, y);
+		if (position != null)
+			g.setColor(position.getColor());
+		else
+			g.setColor(Color.BLACK);
+		g.fillRect((x + maxArena) * size, (y + maxArena) * size, size, size);
+	}
+
+	@Override
+	public void windowClosing(WindowEvent arg0) {
+		System.exit(0);
+	}
+	@Override public void windowClosed(WindowEvent arg0) {}
+	@Override public void windowActivated(WindowEvent arg0) {}
+	@Override public void windowDeactivated(WindowEvent arg0) {}
+	@Override public void windowDeiconified(WindowEvent arg0) {}
+	@Override public void windowIconified(WindowEvent arg0) {}
+	@Override public void windowOpened(WindowEvent arg0) {}
+
 }
