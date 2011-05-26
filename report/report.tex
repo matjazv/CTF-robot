@@ -49,7 +49,7 @@ FAKULTETA ZA RAČUNALNIŠTVO IN INFORMATIKO\\
 
 
 \vspace{1.5cm}
-{\LARGE Rok Kek, Matjaž Vrbole}\\
+{\LARGE Rok Kek, Matjaž Verbole}\\
 
 \vspace{2cm}
 \textsc{\textbf{\LARGE 
@@ -213,12 +213,19 @@ Ko agent pobere zastavo je njegova naloga, da jo prenese v bazo svoje skupine. P
  počasnejše od gibanja agenta, ki zastave nima. Tako da je v tem primeru situacija neizbežna. 
 Pomagamo si lahko le tako, da agenti iste skupine ščitijo agenta z zastavo.\\
 \\
-Agenta lahko ščitimo na dva načina. Prvi način je ta, da se z agentom, ki ne nosi zastave, 
+Agent s pomočjo algoritma A*, naredi plan do baze in ga izvaja. Slika \ref{} prikazuje izdelan 
+plan Agenta lahko ščitimo na dva načina. Prvi način je ta, da se z agentom, ki ne nosi zastave, 
 poizkušamo zaleteti v  agenta nasprotne skupine. Tako ima naš agent z zastavo prosto pot. 
 Drugi način pa je ta, da agent brez zastave le spremlja agenta, ki zastave nima. Ko se 
 nasprotnikov agent zaleti v agenta z zastavo (ob tem seveda oba agenta izgubita življenje), 
 tako lahko preživeli agent pobere zastavo in nadaljuje pot proti bazi. Odločili smo se za 
-implementacijo drugega primera ščitenja agentov, saj je lažji in prav tako učinkovit.
+implementacijo drugega primera ščitenja agentov, saj je lažji in prav tako učinkovit.\\
+\begin{figure}[ht]
+ \centering
+ \includegraphics[width=10cm]{./pictures/plan.png}
+ \caption[Izdelan plan]{Agentov plan od zastave do baze}
+ \label{grupe}
+\end{figure}
 
 
 \section{Srečanje z drugimi agenti}
