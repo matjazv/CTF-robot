@@ -120,9 +120,10 @@ Agenti, sodelovanje, CTF, raziskovanje, algoritmi, AI.
 Okolje je implementirano v programskem jeziku Java. Okolje omogoča nalaganje različnih zemljevidov,
  postavitev zastave in izbiro načinov igranja. V sklopu vaj smo se osredotočili le na način pri katerem
  skupina agentov v čim krajšem času najde zastavo in jo prinese v domačo bazo. Na enem zemljevidu je tako
- več skupin agentov, zmaga tista skupina ki prinese zastavo prva.
+ več skupin agentov, zmaga tista skupina ki prinese zastavo prva. Na sliki \ref{okolje} je prikazano
+simulirano okolje brez agentov. 
 \\
-V simuliranem okolju imamo implementirano tudi senzoriko agenta, in akcije ki jih lahko izvaja.
+V simuliranem okolju imamo implementirano tudi senzoriko agenta, in akcije ki jih lahko izvaja.\\
 
 \begin{figure}[ht]
  \centering
@@ -147,7 +148,7 @@ nasprotnikova zastava, njegova zastava, njegova baza in član njegove skupine z 
 
 
 \section{Akcije agenta}
-Agent lahko vpliva na okolje z svojim gibanjem, z pošiljanjem sporočil ter lahko nosi zastavo svoje ekipe.
+Agent lahko vpliva na okolje z; svojim gibanjem, z pošiljanjem sporočil in lahko nosi zastavo svoje ekipe.
 
 \subsection{Gibanje}
 Agent se lahko vedno premakne v katerokoli od štirih smeri (gor, dol, levo in desno), ne glede na to,
@@ -170,32 +171,49 @@ nadaljujejo od tam naprej. Igra dopušča tudi možnost, da je na enkrat na zeml
 \chapter{Problemi na katere smo naleteli}
 
 \section{Raziskovanje}
-Program poženemo za več predpostavljenih stopenj. Pri predpostavljeni stopnji, ki je manjša oziroma enaka realni, pričakujemo podobne
-dostopne čase. Ko pa presežemo mejo realne stopnje asociativnosti pa bi moral čas narasti. Izpis programa prikazuje slika 
+Pri raziskovanju prostora je pomembno, da si agenti čimbolj razdelijo prostor, ki ga preiskujejo. Pomembno je tudi,
+da preiščejo ves prostor, do katerega lahko pridejo (Dokler ne najdejo zastave).\\
+\\
+Razsikovanje je implementirano tako, da vse neobiskane celice oceni in nato izbere najboljšo. Ocena se izračuna na 
+podlagi tega, koliko novih celic odkrijemo če obiščemo to pozicijo, ta ocena je skalirana z razdaljo te pozicije od 
+trenutne pozicije. Majhen vpliv na oceno pa predstavlja bljižina zidu. Tem bližje kot smo zidu, tem manjša je ocena. 
+Do najboljše pozicije agent izdela plan poti s pomočjo algoritma A*.\\
+Ta strategija se je izkazala kot učinkovita, vendar se včasih izkaže, da na poti izpušča majhne kotičke, do katerih 
+mora naknadno dostopati, po seveda veliko daljši poti. Rešitev za ta problem bi bila, če bi agenta prisilili, da raje 
+izbira pot, ki je v ravni liniji.\\
+Da se agenti, ki ne utegnejo komunicirati med sabo (zaradi prevelike razdalje), nebi očali za isto pot, je v samo 
+hveristiko potrebno vnesti nek naključen člen. Ta vpliv pa mora biti seveda manjši od vseh ostalih. Ker je 
+agentov veliko smo implementirali, tako da so nekateri agenti bolj podvrženi naklučju in nekateri manj.
 
 \section{Iskanje poti do zastave}
 
-V primeru, ko se zastava agentove skupine pojavi v njegovem vidnem polju ve katera je njegova ciljna celica,
-ni pa nujno da obstaja pot po raziskanem prostoru, do te celice. V primeru da pot obstaja, je problem trivialen
-in agent gere po zastavo. V primeru ko pa poti ni, pa je potrebno prostor nadaljne raziskati.\\
+V primeru, ko se zastava agentove skupine pojavi v njegovem vidnem polju ve katera je njegova ciljna celica, 
+ni pa nujno da obstaja pot po raziskanem prostoru, do te celice. V primeru da pot obstaja, je problem trivialen 
+in agent gere po zastavo. V primeru ko pa poti ni, pa je potrebno prostor nadaljne raziskati. Na sliki \ref{grupe}
+ so z svetlejšo barvo označeni predeli, do katerih s trenutnim znanjem agent ne zna priti.\\
+\begin{figure}[ht]
+ \centering
+ \includegraphics[width=7cm]{./pictures/Grupe.png}
+ \caption[Agentova predstavitev sveta]{Agentova notranja predstavitev sveta}
+ \label{grupe}
+\end{figure}
 \\
-V naši implementaciji agenta se s slednjim problemom soočamo tako, da agent sledi zidu v levo ali desno stran.
-Tako so nekateri agenti levičarji in drugi desničarji, to se izračuna na podlagi njegove ID številke. Razdelitev
-agentov na desničarje in levičarje nam reši dve stvari, to da agenti ne sledijo isti poti. Ter dopušča možnost,
-da nek agent najde krajšo pot. Seveda vsem agentom, ki jih sreča na poti sporoči svoja spoznanja, tako da se lahko zgodi,
-da manjkajoči del zemljevida izve od drugih agentov in problem postane zopet trivialen.
+V naši implementaciji agenta se s slednjim problemom soočamo tako, da agent sledi zidu v levo ali desno stran. 
+Tako so nekateri agenti levičarji in drugi desničarji, to se izračuna na podlagi njegove ID številke. Razdelitev 
+agentov na desničarje in levičarje nam reši dve stvari, to da agenti ne sledijo isti poti. Ter dopušča možnost, 
+da nek agent najde krajšo pot. Seveda vsem agentom, ki jih sreča na poti sporoči svoja spoznanja, tako da se lahko 
+zgodi, da manjkajoči del zemljevida izve od drugih agentov in problem postane zopet trivialen.
 
 
 \section{Prenos zastave v domačo bazo}
 
-Ko agent pobere zastavo je njegova naloga, da jo prenese v bazo svoje skupine.
- Pri tem pa lahko naleti na agenta nasprotne ekipe, ki ga po vsej verjetnosti 
-poizkušal ovirati na njegovi poti. Agentu ne preostane drugega, kakor da se mu umika.
-Vendar pa je gibanje agenta, ki nosi zastavo počasnejše od gibanja agenta, ki zastave nima.
-Tako da je v tem primeru situacija neizbežna. Pomagamo si lahko le tako, da agenti iste 
-skupine ščitijo agenta z zastavo.\\
+Ko agent pobere zastavo je njegova naloga, da jo prenese v bazo svoje skupine. Pri tem pa lahko
+ naleti na agenta nasprotne ekipe, ki ga po vsej verjetnosti poizkušal ovirati na njegovi poti.
+ Agentu ne preostane drugega, kakor da se mu umika. Vendar pa je gibanje agenta, ki nosi zastavo
+ počasnejše od gibanja agenta, ki zastave nima. Tako da je v tem primeru situacija neizbežna. 
+Pomagamo si lahko le tako, da agenti iste skupine ščitijo agenta z zastavo.\\
 \\
-Agenta lahko ščitimo na dva načina. Prvi način je ta, da se z agentom, ki ne nosi zastave,
+Agenta lahko ščitimo na dva načina. Prvi način je ta, da se z agentom, ki ne nosi zastave, 
 poizkušamo zaleteti v  agenta nasprotne skupine. Tako ima naš agent z zastavo prosto pot. 
 Drugi način pa je ta, da agent brez zastave le spremlja agenta, ki zastave nima. Ko se 
 nasprotnikov agent zaleti v agenta z zastavo (ob tem seveda oba agenta izgubita življenje), 
@@ -205,30 +223,37 @@ implementacijo drugega primera ščitenja agentov, saj je lažji in prav tako u�
 
 \section{Srečanje z drugimi agenti}
 
-Pri srečanju agenta iz iste ekipe, ob seveda prednosti komunikacije in posredovanja  medsebojnih informacij,
+Pri srečanju agenta iz iste ekipe, ob seveda prednosti komunikacije in posredovanja  medsebojnih informacij, 
 obstaja nevarnost medsebojnega trka. To predstavlja nevarnost, da dva agenta izgubita življenje dva agenta.\\
 \\
 Ta problem smo rešili tako, da se agenti z nižjimi ID številkami ne ozirajo na agente z višjimi ID, jim pa 
 sporočijo svojo namero gibanja. Tako se lahko agenti z višjo ID prilagodi agentu z nižjo. Izjema je primer, 
 ko agent nosi zastavo, takrat ima ta agent prednost pred vsemi. Kako drugi agenti reagirajo na konfliktno 
-stanje je odvisno od njihovega notranjega stanja. Če iščejo zastavo ali raziskuje prostor potem, najdejo pot 
-mimo celice kamor se odpravlja prioritizirani agent. Če dobi sporočilo da agent nosi zastavo, potem mu začne 
-slediti, in ga na ta način varuje pred sovražniki.
+stanje je odvisno od njihovega notranjega stanja. Če iščejo zastavo 
 
 \subsection{Srečanje z agenti nasprotne ekipe}
-Če se agent sreča z agentom nasprotne skupine pomeni, da je v njegovem vidnem polju.
-V primeru, da je kateri izmed teh dveh agentov “nepazljiv” in se premakne v celico, 
-kjer je drug agent, lahko pride do medsebojnega trka. Če agentova strategija ni usmerjena k
-uničevanju drugih agentov in s tem posledično tudi samega sebe, je edina logična pot ta, da
-se agenta poskušata zaobiti in s tem ohranita možnost iskanja vsak svoje zastave.\\
+Če se agent sreča z agentom nasprotne skupine pomeni, da je v njegovem vidnem polju. V primeru, da je kateri
+izmed teh dveh agentov “nepazljiv” in se premakne v celico, kjer je drug agent, lahko pride do medsebojnega 
+trka. Če agentova strategija ni usmerjena k uničevanju drugih agentov in s tem posledično tudi samega sebe, 
+je edina logična pot ta, da se agenta poskušata zaobiti in s tem ohranita možnost iskanja vsak svoje zastave.\\
 \\
-Naši agenti so sprogramirani tako, da se poskušajo izogibati agentom nasprotne skupine. 
-Ko se nasprotni agent približa našemu agentu na 1 celico narazen, se naš agent premakne 
-v nasprotno smer od sovražnega agenta. To pomeni, če naš agent vidi nasprotnika levo od 
-svoje trenutne pozicije, se bo v naslenjem koraku premaknil desno, če tam seveda ni kakšne 
-druge ovire (stena, agent). Izjema je primer ko je agent varovan oziroma ima spremstvo, torej
-nese zastavo proti bazi. V tem primeru, pa agent ne reagira na druge agente, temveč nese zastavo
-naravnost proti bazi.
+Naši agenti so sprogramirani tako, da se poskušajo izogibati agentom nasprotne skupine. Ko se nasprotni
+agent približa našemu agentu na razjo ene celice, se naš agent premakne v nasprotno smer od sovražnega agenta.
+To pomeni, če naš agent vidi nasprotnika levo od svoje trenutne pozicije, se bo v naslenjem koraku premaknil desno,
+če tam seveda ni kakšne druge ovire (stena, agent). Izjema je primer ko je agent varovan oziroma ima spremstvo,
+torej nese zastavo proti bazi. V tem primeru, pa agent ne reagira na druge agente, temveč nese zastavo naravnost
+proti bazi.
+
+
+\subsection{Žrtvovanje agenta} 
+Agenta ob trku oba izgubita življenje. Agent, ki izgubi življenje izgub vso informacijo, ki jo je do
+tistega trenutka pridobil. Tako, da je v interesu celotne skupine, da se agent takim situacijam izogiba.
+Vendar obstajajo situacije pri katerih, se izplača, da se agent žrtvuje. Primer take situacije je ko agent
+nasprotne skupine nosi v svojo bazo. Vendar senzorika nam te informacije ne posreduje.\\
+\\
+V naši implementaciji agenta smo tako ubali strategijo, da agent, ki je svojo informacijo pred kratkim
+(določeno s parametrom) predal naprej agentu z nižjim ID, ob morebitnem srečanju z nasprotnikom žrtvuje
+življenje in upa, da mu je povzročil čim več nevšečnosti.
 \newpage
 
 %********************************************
@@ -242,26 +267,6 @@ naravnost proti bazi.
 
 
 
-%********************************************
-
-\newpage
-
-\addcontentsline{toc}{chapter}{Literatura}
-\label{stran_literatura}
-
-\begin{thebibliography}{99}
-
-\bibitem{Kodek2000} D. Kodek, ``Predpomnilnik'' 
-\textit{Arhitektura Računalniških Sistemov}, Ljubljana: BI-TIM, januar 2000, str. 314-346.
-
-\bibitem{VLDB1} Hong-Tai Chou and David J. Dewitt, \textit{An Evaluation of Buffer Management Strategies for Relational Database Systems}, VLDB, 1985.
-Dostopno na:\\
-http://www.vldb.org/conf/1985/P127.PDF
-
-
-
-
-\end{thebibliography}
 
 
 \end{document}
