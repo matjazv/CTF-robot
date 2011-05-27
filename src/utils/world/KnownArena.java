@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Vector;
 
+import org.omg.CORBA.PRIVATE_MEMBER;
+
 import utils.world.KnownPosition.CompareType;
 
 
@@ -21,7 +23,9 @@ public class KnownArena {
 	private HashMap<KnownPosition, KnownPosition> arena;
 	//private HashMap<Integer, KnownPosition> landmarks;
 	
-	public Vector<KnownPosition> toVisit;
+	private Vector<KnownPosition> toVisit;
+	
+	private Vector<KnownPosition> discoveredPositions;
 	
 	private KnownPosition curentPosition;
 	
@@ -33,6 +37,7 @@ public class KnownArena {
 	
 	public KnownArena (Neighborhood neighborhood) {
 		this.toVisit = new Vector<KnownPosition>();
+		this.discoveredPositions = new Vector<KnownPosition>();
 		this.nSize = neighborhood.getSize();
 		this.curentPosition = getRelativePosition(neighborhood);
 		this.arena = new HashMap<KnownPosition, KnownPosition>();
@@ -58,6 +63,7 @@ public class KnownArena {
 		
 		KnownPosition tempPositionI = new KnownPosition(x,y,type);
 		setPositionAt(x, y, tempPositionI);
+		discoveredPositions.add(tempPositionI);
 		if (tempPositionI.getType() == Neighborhood.EMPTY) {
 			
 			Vector<Group> neighborGroups = new Vector<Group>();
@@ -80,6 +86,10 @@ public class KnownArena {
 		}
 	}
 	
+	public Vector<KnownPosition> getDiscoveredPositions() {
+		return discoveredPositions;
+	}
+
 	private KnownPosition getRelativePosition(Neighborhood neighborhood) {
 		for (int x = -1; x <= 1; x++) {
 			for (int y = -1; y <= 1; y++) {

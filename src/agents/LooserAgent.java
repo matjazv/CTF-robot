@@ -3,6 +3,7 @@ package agents;
 import java.util.Arrays;
 import java.util.LinkedList;
 
+
 import utils.world.Decision;
 import utils.world.KnownArena;
 import utils.world.KnownArenaView;
@@ -132,6 +133,7 @@ public class LooserAgent extends Agent {
 	@Override
 	public void receive(int from, byte[] message) {
 		//String msg = new String(message);
+		
 	}
 	
 	@Override
