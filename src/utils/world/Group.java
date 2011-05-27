@@ -25,7 +25,10 @@ public class Group {
 				return arg1.getNeighbors().size() - arg0.getNeighbors().size();
 			}});
 		
-		HashSet<Group> temp = neighborGroups.get(0).getNeighbors();
+		HashSet<Group> temp = null;
+		if (!neighborGroups.isEmpty()) {
+			temp = neighborGroups.firstElement().getNeighbors();
+		}
 		for (Group g : neighborGroups) {
 			if (g.getNeighbors() == temp) continue;
 			for (Group gt : g.getNeighbors()) if (gt != g) gt.setNeighbors(temp);

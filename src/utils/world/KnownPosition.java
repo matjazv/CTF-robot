@@ -2,8 +2,6 @@ package utils.world;
 
 import java.awt.Color;
 
-import utils.BestPos;
-import utils.KnownArena;
 
 import fri.pipt.protocol.Neighborhood;
 public class KnownPosition implements Comparable<KnownPosition> {
@@ -35,7 +33,7 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	}
 	
 	public boolean isAccesible() {
-		return this.group.isConnected();
+		return this.group == null ? false : this.group.isConnected();
 	}
 
 	private int x;
@@ -115,7 +113,7 @@ public class KnownPosition implements Comparable<KnownPosition> {
     public Color getColor() {
     	switch (this.type) {
     	case Neighborhood.EMPTY:
-    		int  group = this.group.isConnected() ? 0 : 50;
+    		int  group = this.isAccesible() ? 0 : 50;
     		return new Color(group, 120+group, group);
     	case Neighborhood.WALL:
     		return Color.GRAY;
@@ -136,35 +134,82 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	public int compareTo(KnownPosition position) {
 		switch(compareType) {
 		case EXPLORE:
-			return 0;
+			return (int) (((position.mark*2/(position.distance+1)) - (this.mark*2/(this.distance+1))) * (0.9 + 0.2*Math.random()) );
 		case PLAN:
-			
+			return this.getF() + this.getH() - position.getF() - position.getH();
 		}
 		return 0;
 	}
-
 	
-	// FOR PLANING
+	//FOR PLANING
+
+	private KnownPosition goal;
+	private KnownPosition parent;
+	private int h;
+	
+	public void setParent(KnownPosition parent) {
+		this.parent = parent;
+	}
+	
+	public KnownPosition getParent() {
+		return parent;
+	}
+
+	public void setGoal(KnownPosition goal) {
+		this.h = -1;
+		this.goal = goal;
+	}
+
+	private int getH() {
+		if (h == -1 && goal != null) {
+			h = distance(this, goal);
+		}
+		return h ;
+	}
+
+	private int f;
+	
+	public int getF() {
+		return f;
+	}
+	
+	public void setF(int f) {
+		this.f = f;
+	}
+	// FOR EXPLORE
 	
 	private int mark;
 	private int distance;
-	private int nearWall;
-	/*
-	public int compareTo(BestPos o) {
-		return (int) -((this.mark*10000/(this.distance+(this.nearWall/o.distance))) - (o.mark*10000/(o.distance+(o.nearWall/o.distance))));
-	}
-
-	public boolean eval(KnownArena knownArena) {
-		knownArena.getUnknown(this);
-		if (this.mark <= minMark) return true;
-		distance = Math.sqrt(Math.pow(knownArena.curentPosition.getX() - p.getX(), 2)
-				+ Math.pow(knownArena.curentPosition.getY() - p.getY(), 2));
+	//private int nearWall;
+	
+	
+	
+	//private final int minMark = 0;
+	public boolean eval() {
+		this.mark = isAccesible() ? this.getUnknown(): Integer.MIN_VALUE/4;
+		//if (this.mark <= minMark) return true;
+		distance = distance(this, KnownArena.getARENA().getCurentPosition());
 		return false;
 	}
-	*/
+	
+	private int getUnknown() {
+		int unknown = 0;
+		int nSize = KnownArena.getARENA().getnSize();
+		int mX = this.getX() + nSize;
+		int mY = this.getY() + nSize;
+		for (int x = this.getX() - nSize; x <= mX; x++) {
+			for (int y = this.getY() - nSize; y <= mY; y++) {
+				unknown += KnownArena.getARENA().getPositionAt(x,y) == null ? 1 : (KnownArena.getARENA().getPositionAt(x,y).isAccesible() ? 0 : -1);
+			}
+		}
+		return unknown;
+	}
+
 	public static void setCompareType(CompareType compareType) {
 		KnownPosition.compareType = compareType;
 	}
+
+	
 
 	
 	

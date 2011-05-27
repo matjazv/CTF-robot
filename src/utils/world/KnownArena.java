@@ -1,7 +1,10 @@
 package utils.world;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Vector;
+
+import utils.world.KnownPosition.CompareType;
 
 
 import fri.pipt.protocol.Neighborhood;
@@ -18,17 +21,24 @@ public class KnownArena {
 	private HashMap<KnownPosition, KnownPosition> arena;
 	//private HashMap<Integer, KnownPosition> landmarks;
 	
+	public Vector<KnownPosition> toVisit;
+	
 	private KnownPosition curentPosition;
 	
 	private int nSize;
 	
+	public int getnSize() {
+		return nSize;
+	}
+	
 	public KnownArena (Neighborhood neighborhood) {
-		
+		this.toVisit = new Vector<KnownPosition>();
 		this.nSize = neighborhood.getSize();
 		this.curentPosition = getRelativePosition(neighborhood);
 		this.arena = new HashMap<KnownPosition, KnownPosition>();
-		curentPosition.setGroup();
-		setPositionAt(curentPosition.getX(), curentPosition.getY(), curentPosition);
+		//curentPosition.setGroup();
+		//setPositionAt(curentPosition.getX(), curentPosition.getY(), curentPosition);
+		updateCell(curentPosition.getX(), curentPosition.getY(), Neighborhood.EMPTY);
 		for (int x = -neighborhood.getSize(); x <= neighborhood.getSize(); x++) {
 			for (int y = -neighborhood.getSize(); y <= neighborhood.getSize(); y++) {
 				updateCell(x+curentPosition.getX(), y+curentPosition.getY(), neighborhood.getCell(x, y));
@@ -63,6 +73,7 @@ public class KnownArena {
 			if (tempPositionN != null && tempPositionN.getType() == Neighborhood.EMPTY) neighborGroups.add(tempPositionN.getGroup());
 			
 			tempPositionI.setGroup();
+			this.toVisit.add(tempPositionI);
 			neighborGroups.add(tempPositionI.getGroup());
 			Group.connect(neighborGroups);
 			
@@ -135,5 +146,14 @@ public class KnownArena {
 
 	public HashMap<KnownPosition, KnownPosition> getArena() {
 		return arena;
+	}
+	
+	public KnownPosition getBestExploreCandidate() {
+		for (KnownPosition position : toVisit) {
+			position.eval();
+		}
+		KnownPosition.setCompareType(CompareType.EXPLORE);
+		Collections.sort(toVisit);
+		return toVisit.firstElement();
 	}
 }

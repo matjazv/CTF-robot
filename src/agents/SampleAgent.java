@@ -18,12 +18,15 @@
 package agents;
 
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.Vector;
 
 import utils.BestPos;
 import utils.KnownArena;
 import utils.Plan;
 import utils.world.KnownArenaView;
+import utils.world.KnownPosition;
+import utils.world.Planer;
 import fri.pipt.agent.Agent;
 import fri.pipt.agent.Membership;
 import fri.pipt.protocol.Neighborhood;
@@ -32,7 +35,7 @@ import fri.pipt.protocol.Message.Direction;
 
 // Run: java -cp bin fri.pipt.agent.Agent localhost fri.pipt.agent.sample.SampleAgent
 
-@Membership("samples")
+@Membership("humans")
 public class SampleAgent extends Agent {
 	private KnownArenaView arenaviev;
 	private KnownArenaView arenavievKA;
@@ -209,6 +212,10 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		}
 }
 	
+	private void decideOnExplore2() {
+		mulDirection(Planer.getExplorePlan());
+	}
+	
 	private Plan mulDirection(Plan p) {
 		if (p.parent == null) return null;
 		if (p.parent.p.getX() - p.p.getX()  == 1) {
@@ -221,6 +228,35 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 			this.up.multiplyWeight(2);
 		}
 		return p.parent;
+	}
+	
+	private void mulDirection(LinkedList<KnownPosition> plan) {
+		KnownPosition current;
+		KnownPosition next;
+		if (plan.isEmpty()) {
+			return;
+		} if (plan.size() < 2) {
+			plan.pollFirst();
+			return;
+		} else {
+			current = plan.pollFirst();
+			System.out.println(current.toString());
+			next = plan.getFirst();
+			System.out.println(next.toString());
+		}
+		if (next.getX() - current.getX()  == 1) {
+			this.right.multiplyWeight(2);
+			System.out.println("DESNO");
+		} else if (next.getX() - current.getX()  == -1) {
+			this.left.multiplyWeight(2);
+			System.out.println("LEVO");
+		} else if (next.getY() - current.getY()  == 1) {
+			this.down.multiplyWeight(2);
+			System.out.println("DOL");
+		} else if (next.getY() - current.getY()  == -1) {
+			this.up.multiplyWeight(2);
+			System.out.println("GOR");
+		}
 	}
 
 	private Explore ret;
@@ -250,14 +286,15 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		if ( this.knownArena == null) {
 			knownArena = new KnownArena(neighborhood);
 			ka = new utils.world.KnownArena(neighborhood);
-			arenaviev = new KnownArenaView(ka);
+			//arenaviev = new KnownArenaView(ka);
 			//arenavievKA = new KnownArenaView(knownArena);
 		}
 		else if ( direction == Direction.NONE ) {
 			knownArena.updatePosition(this.direction);
 			knownArena.updateArena(neighborhood);
+			
 			ka.updatePosition(neighborhood, this.direction);
-			arenaviev.repaint();
+			
 			//arenavievKA.repaint();
 		}
 		
@@ -287,13 +324,17 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 
 	@Override
 	public void run() {
-
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e) {
+		}
 		while (isAlive()) {
 			
 			try {
 
 				scanAndWait();
 				if (direction == Direction.NONE) {
+					//arenaviev.repaint();
 					direction = updateDecisions(neighborhood, state).getDirection();
 					move(direction);
 				}
@@ -303,7 +344,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 			}
 
 			try {
-				Thread.sleep(10);
+				Thread.sleep(5000);
 			} catch (InterruptedException e) {
 			}
 
