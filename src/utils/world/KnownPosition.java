@@ -2,6 +2,8 @@ package utils.world;
 
 import java.awt.Color;
 
+import agents.LooserAgent;
+
 
 import fri.pipt.protocol.Neighborhood;
 public class KnownPosition implements Comparable<KnownPosition> {
@@ -17,6 +19,7 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	}
 
 	public KnownPosition (int x, int y, int type) {
+		if (cells == 0) cells = (2*KnownArena.getARENA().getnSize()*KnownArena.getARENA().getnSize() + 1) * (2*KnownArena.getARENA().getnSize()*KnownArena.getARENA().getnSize() + 1);
 		this.x = x;
 		this.y = y;
 		setType(type);
@@ -134,7 +137,9 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	public int compareTo(KnownPosition position) {
 		switch(compareType) {
 		case EXPLORE:
-			return (int) (((position.mark*2/(position.distance+1)) - (this.mark*2/(this.distance+1))) * (0.9 + 0.2*Math.random()) );
+			if (this.mark == 0 || !this.isAccesible()) return 1;
+			if (position.mark == 0 || !position.isAccesible()) return -1;
+			return (position.mark - this.mark) < 0 ? -1 : ((position.mark - this.mark) == 0 ? 0 : 1);
 		case PLAN:
 			return this.getF() + this.getH() - position.getF() - position.getH();
 		}
@@ -178,31 +183,38 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	}
 	// FOR EXPLORE
 	
-	private int mark;
+	private int unknown;
+	private int unAccessible;
+	private int walls;
 	private int distance;
-	//private int nearWall;
+	private double mark;
+	private static double cells = 0;
 	
-	
-	
-	//private final int minMark = 0;
 	public boolean eval() {
-		this.mark = isAccesible() ? this.getUnknown(): Integer.MIN_VALUE/4;
-		//if (this.mark <= minMark) return true;
-		distance = distance(this, KnownArena.getARENA().getCurentPosition());
-		return false;
-	}
-	
-	private int getUnknown() {
-		int unknown = 0;
+		this.unknown = 0;
+		this.unAccessible = 0;
+		if ( getType() != Neighborhood.EMPTY ) return true;
 		int nSize = KnownArena.getARENA().getnSize();
 		int mX = this.getX() + nSize;
 		int mY = this.getY() + nSize;
 		for (int x = this.getX() - nSize; x <= mX; x++) {
 			for (int y = this.getY() - nSize; y <= mY; y++) {
-				unknown += KnownArena.getARENA().getPositionAt(x,y) == null ? 1 : (KnownArena.getARENA().getPositionAt(x,y).isAccesible() ? 0 : -1);
+				if (KnownArena.getARENA().getPositionAt(x,y) == null ) {
+					this.unknown++;
+				} else if (KnownArena.getARENA().getPositionAt(x,y).getType() == Neighborhood.EMPTY) {
+					this.unAccessible += KnownArena.getARENA().getPositionAt(x,y).isAccesible() ? 1 : 0;
+				} else if (KnownArena.getARENA().getPositionAt(x,y).getType() == Neighborhood.WALL) {
+					this.walls++;
+				}
 			}
 		}
-		return unknown;
+		distance = distance(this, KnownArena.getARENA().getCurentPosition());
+		this.mark = 1000 * this.unknown / cells
+				* (1 - (this.walls / cells) * LooserAgent.wallImportance)
+				* (1 - (this.unAccessible / cells) * LooserAgent.unAccessibleImportance)
+				* LooserAgent.randomImportance
+				/ ((this.distance / (cells * 0.2)) * LooserAgent.distanceImportance);
+		return unknown == 0;
 	}
 
 	public static void setCompareType(CompareType compareType) {

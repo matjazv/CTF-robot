@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 
+import utils.agent.AgentState;
 import utils.world.KnownPosition.CompareType;
 
 import fri.pipt.protocol.Neighborhood;
@@ -11,22 +12,52 @@ import fri.pipt.protocol.Neighborhood;
 public class Planer {
 	
 	private static LinkedList<KnownPosition> explorePlan;
+	private static LinkedList<KnownPosition> seekPlan;
+	private static LinkedList<KnownPosition> returnPlan;
 	
-	public static LinkedList<KnownPosition> getExplorePlan() {
-		if (explorePlan == null || explorePlan.size() < 2 || !explorePlan.getFirst().equals(KnownArena.getARENA().getCurentPosition())) {
-			explorePlan = makePlanAStar(KnownArena.getARENA().getBestExploreCandidate(), false);
+	private static int counter = 0;
+	public static LinkedList<KnownPosition> getPlan() {
+		counter = (counter+1)%5;
+		switch (AgentState.getCalmState()) {
+		case AgentState.EXPLORE:
+			if (counter == 0 || explorePlan == null || explorePlan.size() < 2 || !explorePlan.getFirst().equals(KnownArena.getARENA().getCurentPosition())) {
+				explorePlan = makePlanAStar(KnownArena.getARENA().getBestExploreCandidate(), false);
+			}
+			return explorePlan;
+		case AgentState.RETURN:
+			if (counter == 0 || returnPlan == null || returnPlan.size() < 2 || !returnPlan.getFirst().equals(KnownArena.getARENA().getCurentPosition())) {
+				returnPlan = makePlanAStar(KnownArena.getARENA().getPositionAt(0, 0), true);
+			}
+			return returnPlan;
+		case AgentState.SEEK:
+			if (counter == 0 || seekPlan == null || seekPlan.size() < 2  || !seekPlan.getFirst().equals(KnownArena.getARENA().getCurentPosition())) {
+				seekPlan = makePlanAStar(KnownArena.getARENA().getFlagPosition(), true);
+			}
+			return seekPlan;
+		default:
+			return null;
 		}
-		return explorePlan;
+			
 	}
 	
-	public static LinkedList<KnownPosition> getExplorePlanForPaint() {
-		return explorePlan;
+	public static LinkedList<KnownPosition> getPlanForPaint() {
+		switch (AgentState.getCalmState()) {
+		case AgentState.EXPLORE:
+			return explorePlan;
+		case AgentState.RETURN:
+			return returnPlan;
+		case AgentState.SEEK:
+			return seekPlan;
+		default:
+			return null;
+		}
 	}
 
 
 	public static LinkedList<KnownPosition> makePlanAStar(KnownPosition goal, boolean force) {
 		
-		if (KnownArena.getARENA().getPositionAt(goal) == null || !goal.isAccesible() || (KnownArena.getARENA().getPositionAt(goal).getType() != Neighborhood.EMPTY && !force)) {
+		if (KnownArena.getARENA().getPositionAt(goal) == null || (KnownArena.getARENA().getPositionAt(goal).getType() != Neighborhood.EMPTY && !force)) {
+			System.out.println("dsakfglsdahgsadfjgkjdfajalgfkakgjfasdjAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa");
 			return null;
 		}
 		
@@ -50,7 +81,7 @@ public class Planer {
 					plan.addLast(position);
 					position = position.getParent();
 				}
-				//plan.addLast(goal);
+				plan.addLast(goal);
 				return plan;
 			}
 			tempPosition = KnownArena.getARENA().getPositionAt(position.getX() + 1, position.getY());
@@ -86,7 +117,7 @@ public class Planer {
 				priorityQueue.add(tempPosition);
 			}
 		}
-
+		System.out.println("dsakfglsdahgsadfjgkjdfajalgfkakgjfasdjAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa");
 		return plan;
 	}
 

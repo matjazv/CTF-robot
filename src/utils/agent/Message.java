@@ -20,9 +20,9 @@ public class Message {
 		message[index++] = (byte) Neighborhood.EMPTY;
 		message[index++] = (byte) KnownArena.getARENA().getCurentPosition().getX();
 		message[index++] = (byte) KnownArena.getARENA().getCurentPosition().getY();
-		if (Planer.getExplorePlanForPaint().size() > 1) {
-			message[index++] = (byte) Planer.getExplorePlanForPaint().get(1).getX();
-			message[index++] = (byte) Planer.getExplorePlanForPaint().get(1).getY();
+		if (Planer.getPlanForPaint().size() > 1) {
+			message[index++] = (byte) Planer.getPlanForPaint().get(1).getX();
+			message[index++] = (byte) Planer.getPlanForPaint().get(1).getY();
 		} else {
 			message[index++] = (byte) KnownArena.getARENA().getCurentPosition().getX();
 			message[index++] = (byte) KnownArena.getARENA().getCurentPosition().getY();

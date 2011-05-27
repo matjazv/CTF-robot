@@ -4,8 +4,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Vector;
 
-import org.omg.CORBA.PRIVATE_MEMBER;
-
+import agents.LooserAgent;
+import utils.agent.AgentState;
 import utils.world.KnownPosition.CompareType;
 
 
@@ -27,7 +27,11 @@ public class KnownArena {
 	
 	private Vector<KnownPosition> discoveredPositions;
 	
+	private Vector<AlliesAgent> allies;
+	
 	private KnownPosition curentPosition;
+	
+	private KnownPosition flagPosition;
 	
 	private int nSize;
 	
@@ -36,34 +40,72 @@ public class KnownArena {
 	}
 	
 	public KnownArena (Neighborhood neighborhood) {
+		ARENA = this;
 		this.toVisit = new Vector<KnownPosition>();
+		this.allies = new Vector<AlliesAgent>();
 		this.discoveredPositions = new Vector<KnownPosition>();
 		this.nSize = neighborhood.getSize();
 		this.curentPosition = getRelativePosition(neighborhood);
 		this.arena = new HashMap<KnownPosition, KnownPosition>();
-		//curentPosition.setGroup();
-		//setPositionAt(curentPosition.getX(), curentPosition.getY(), curentPosition);
+
 		updateCell(curentPosition.getX(), curentPosition.getY(), Neighborhood.EMPTY);
+		
 		for (int x = -neighborhood.getSize(); x <= neighborhood.getSize(); x++) {
 			for (int y = -neighborhood.getSize(); y <= neighborhood.getSize(); y++) {
+				
 				updateCell(x+curentPosition.getX(), y+curentPosition.getY(), neighborhood.getCell(x, y));
 			}
 		}
-		
-		ARENA = this;
+		analizeNeighborhood(neighborhood);
 	}
 	
 	public KnownPosition getCurentPosition() {
 		return curentPosition;
 	}
-
+	
+	public void analizeNeighborhood(Neighborhood neighborhood) {
+		byte reactState = AgentState.CALM;
+		for (int x = -neighborhood.getSize(); x <= neighborhood.getSize(); x++) {
+			for (int y = -neighborhood.getSize(); y <= neighborhood.getSize(); y++) {
+				
+				switch(neighborhood.getCell(x, y)) {
+				case Neighborhood.EMPTY:
+					break;
+				case Neighborhood.WALL:
+					break;
+				case Neighborhood.FLAG:
+					this.flagPosition = getPositionAt(x+getCurentPosition().getX(),y + getCurentPosition().getY());
+					AgentState.setCalmState(AgentState.SEEK);
+					break;
+				case Neighborhood.OTHER:
+					reactState |= AgentState.AXIS_NEAR;
+					break;
+				case Neighborhood.OTHER_FLAG:
+					break;
+				case Neighborhood.OTHER_HEADQUARTERS:
+					break;
+				default:
+					if (neighborhood.getCell(x, y) == LooserAgent.getAGENT().getId() || neighborhood.getCell(x, y) <= 0) break;
+					reactState |= AgentState.ALLIES_NEAR;
+					AlliesAgent tempAgent = new AlliesAgent(neighborhood.getCell(x, y));
+					if (!allies.contains(tempAgent)) allies.add(tempAgent);
+					
+				}
+				AgentState.setReactState(reactState);
+				if (LooserAgent.getAGENT().hasFlag()) AgentState.setCalmState(AgentState.RETURN);
+			}
+		}
+	}
 
 	public void updateCell(int x, int y, int type) {
+		
 		if (getPositionAt(x, y) != null) return;
 		
 		KnownPosition tempPositionI = new KnownPosition(x,y,type);
 		setPositionAt(x, y, tempPositionI);
 		discoveredPositions.add(tempPositionI);
+		
+		
 		if (tempPositionI.getType() == Neighborhood.EMPTY) {
 			
 			Vector<Group> neighborGroups = new Vector<Group>();
@@ -86,6 +128,10 @@ public class KnownArena {
 		}
 	}
 	
+	public KnownPosition getFlagPosition() {
+		return flagPosition;
+	}
+
 	public Vector<KnownPosition> getDiscoveredPositions() {
 		return discoveredPositions;
 	}
@@ -121,6 +167,7 @@ public class KnownArena {
 			break;
 		case NONE:
 		}
+		analizeNeighborhood(neighborhood);
 	}
 	
 	private void updateDirection(int dx, int dy, Neighborhood neighborhood) {

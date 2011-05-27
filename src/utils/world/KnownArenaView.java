@@ -37,7 +37,7 @@ public class KnownArenaView extends JFrame implements WindowListener {
 				paintPosition(this.bufferGraphics, x, y);
 			}
 		}
-		paintPlan(this.bufferGraphics, Planer.getExplorePlanForPaint(), Color.ORANGE);
+		paintPlan(this.bufferGraphics, Planer.getPlanForPaint(), Color.ORANGE);
 		paintPosition(this.bufferGraphics, KnownArena.getARENA().getCurentPosition(), Color.MAGENTA);
 
 		g.drawImage(offscreen, 0, 0, this);
@@ -51,6 +51,7 @@ public class KnownArenaView extends JFrame implements WindowListener {
 	}
 	
 	private void paintPlan(Graphics g, LinkedList<KnownPosition> plan, Color color) {
+		if (plan == null) return;
 		for (KnownPosition position : plan) {
 			paintPosition(g, position, color);
 		}

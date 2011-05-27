@@ -213,7 +213,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 }
 	
 	private void decideOnExplore2() {
-		mulDirection(Planer.getExplorePlan());
+		mulDirection(Planer.getPlan());
 	}
 	
 	private Plan mulDirection(Plan p) {

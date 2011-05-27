@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 
 
+import utils.agent.AgentState;
 import utils.world.Decision;
 import utils.world.KnownArena;
 import utils.world.KnownArenaView;
@@ -18,18 +19,19 @@ import fri.pipt.protocol.Message.Direction;
 
 @Membership("samples")
 public class LooserAgent extends Agent {
-	private static enum AgentState {
-		EXPLORE, SEEK, RETURN
+	
+	private static LooserAgent AGENT;
+	
+	public static LooserAgent getAGENT() {
+		return AGENT;
 	}
 	
-	private static enum AgentReactState {
-		CALM, ALLIES_NEAR, AXIS_NEAR
+	private boolean hasFlag;
+	
+	public boolean hasFlag() {
+		return hasFlag;
 	}
-	
-	private AgentState state = AgentState.EXPLORE;
-	private AgentReactState react = AgentReactState.CALM;
-	
-	
+
 	private Direction direction;
 	private Neighborhood neighborhood;
 	private KnownArenaView arenaView;
@@ -40,38 +42,30 @@ public class LooserAgent extends Agent {
 	
 	private Decision[] decisions;
 	
-	private Decision updateDecisions(Neighborhood n, AgentState state) {
-		
+	private Decision updateDecisions(Neighborhood n) {
+		byte state = AgentState.getCalmState();
 		still.setWeight(0.01f);
 		down.setWeight(canMove(n, 0, 1, state) ? 1 : 0);
 		up.setWeight(canMove(n, 0, -1, state) ? 1 : 0);
 		left.setWeight(canMove(n, -1, 0, state) ? 1 : 0);
 		right.setWeight(canMove(n, 1, 0, state) ? 1 : 0);
 		
-		switch (this.react) {
-		case CALM:
-			switch (state) {
-			case EXPLORE:
+		if (utils.agent.AgentState.getReactState() == utils.agent.AgentState.CALM) {
+			if(utils.agent.AgentState.getCalmState() == utils.agent.AgentState.EXPLORE) {
 				decideOnExplore();
-				break;
-			case RETURN: {
+			} else if (utils.agent.AgentState.getCalmState() == utils.agent.AgentState.RETURN)  {
 				decideOnReturn();
-				break;
-			}
-			case SEEK: {
+			}else if (utils.agent.AgentState.getCalmState() == utils.agent.AgentState.SEEK)  {
 				decideOnSeek();
-				break;
 			}
-			}
-			break;
-		
-		case AXIS_NEAR:
+	}	
+	else if ( utils.agent.AgentState.getReactState() == utils.agent.AgentState.AXIS_NEAR) {
 			decideOnAxisNear();
-			break;
-		case ALLIES_NEAR:
+	}
+	else if ( (utils.agent.AgentState.getReactState() & utils.agent.AgentState.ALLIES_NEAR) != 0 ) {
+			System.out.print("dsfdsgdfashfhahsa");
 			decideOnAlliesNear();
-			break;
-		}
+	}
 		
 		
 		
@@ -91,11 +85,11 @@ public class LooserAgent extends Agent {
 	}
 	
 	private void decideOnSeek() {
-	
+		mulDirection(Planer.getPlan());
 	}
 	
 	private void decideOnExplore() {
-		mulDirection(Planer.getExplorePlan());
+		mulDirection(Planer.getPlan());
 	}
 	
 	private void mulDirection(LinkedList<KnownPosition> plan) {
@@ -128,6 +122,7 @@ public class LooserAgent extends Agent {
 	}
 	
 	private void decideOnReturn() {
+		mulDirection(Planer.getPlan());
 	}
 
 	@Override
@@ -139,12 +134,14 @@ public class LooserAgent extends Agent {
 	@Override
 	public void state(int stamp, Neighborhood neighborhood, Direction direction, boolean hasFlag) {
 		synchronized (waitMutex) {
-			
+			this.hasFlag = hasFlag;
 			if (KnownArena.getARENA() == null) { 
 				new KnownArena(neighborhood);
-				//arenaView = new KnownArenaView(KnownArena.getARENA());
+				arenaView = new KnownArenaView(KnownArena.getARENA());
 			} else if ( direction == Direction.NONE ) {
 				KnownArena.getARENA().updatePosition(neighborhood, this.direction);
+
+				//arenaView.repaint();
 			}
 		
 			this.neighborhood = neighborhood;
@@ -175,7 +172,7 @@ public class LooserAgent extends Agent {
 	public void run() {
 		try {
 			Thread.sleep(200);
-		
+			int speed = 2000 / getSpeed();
 			while (isAlive()) {
 				
 				synchronized (waitMutex) {
@@ -183,13 +180,12 @@ public class LooserAgent extends Agent {
 					waitMutex.wait();
 				
 					if (direction == Direction.NONE) {
-						//arenaView.repaint();
-						direction = updateDecisions(neighborhood, state).getDirection();
+						direction = updateDecisions(neighborhood).getDirection();
 						move(direction);
 					}
-					waitMutex.notify();
+					System.out.println(AgentState.getCalmState()); 
 				}
-				Thread.sleep(100);
+				Thread.sleep(speed);
 			}
 		}
 		catch (InterruptedException e) {
@@ -199,19 +195,23 @@ public class LooserAgent extends Agent {
 	}
 
 	
-	private boolean canMove(Neighborhood n, int x, int y, AgentState state) {
+	private boolean canMove(Neighborhood n, int x, int y, byte state) {
 		
 		switch (state) {
-		case RETURN:
+		case AgentState.RETURN:
 			return n.getCell(x, y) == Neighborhood.EMPTY || n.getCell(x, y) == Neighborhood.HEADQUARTERS;
-		case SEEK:
+		case AgentState.SEEK:
 			return n.getCell(x, y) == Neighborhood.EMPTY || n.getCell(x, y) == Neighborhood.FLAG;
 		default:
 			return n.getCell(x, y) == Neighborhood.EMPTY;		
 		}
 		
 	}
-
+	
+	public static double wallImportance;
+	public static double unAccessibleImportance;
+	public static double distanceImportance;
+	public static double randomImportance;
 	@Override
 	public void initialize() {
 		left = new Decision(0, Direction.LEFT);
@@ -220,9 +220,16 @@ public class LooserAgent extends Agent {
 		down = new Decision(0, Direction.DOWN);
 		still = new Decision(0, Direction.NONE);
 		
+		wallImportance = 0.08 + (0.13 * Math.random());
+		unAccessibleImportance = 0.02 + (0.08 * Math.random());
+		distanceImportance = 0.9 + (0.1 * Math.random());
+		randomImportance = 0.98 + (0.02 * Math.random());
+		
 		decisions = new Decision[] {
 			left, right, up, down, still	
 		};
+		
+		AGENT = this;
 	}
 	
 	
