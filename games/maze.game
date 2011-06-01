@@ -1,4 +1,4 @@
-gameplay.field=maze.png
+gameplay.field=box.png
 gameplay.agents=20
 gameplay.speed=100
 gameplay.respawn=30

@@ -30,6 +30,12 @@ public class KnownArena {
 	
 	private Vector<AlliesAgent> allies;
 	
+	HashSet<KnownPosition> forbiden;
+	
+	public HashSet<KnownPosition> getForbiden() {
+		return forbiden;
+	}
+
 	public Vector<AlliesAgent> getAllies() {
 		return allies;
 	}
@@ -52,6 +58,7 @@ public class KnownArena {
 		this.nSize = neighborhood.getSize();
 		this.curentPosition = getRelativePosition(neighborhood);
 		this.arena = new HashMap<KnownPosition, KnownPosition>();
+		this.forbiden = new HashSet<KnownPosition>();
 
 		updateCell(curentPosition.getX(), curentPosition.getY(), Neighborhood.EMPTY);
 		this.curentPosition = getPositionAt(curentPosition.getX(), curentPosition.getY());
@@ -70,6 +77,7 @@ public class KnownArena {
 	
 	public void analizeNeighborhood(Neighborhood neighborhood) {
 		byte reactState = AgentState.CALM;
+		Vector<AlliesAgent> temp = new Vector<AlliesAgent>();
 		for (int x = -neighborhood.getSize(); x <= neighborhood.getSize(); x++) {
 			for (int y = -neighborhood.getSize(); y <= neighborhood.getSize(); y++) {
 				
@@ -93,10 +101,17 @@ public class KnownArena {
 					if (neighborhood.getCell(x, y) == LooserAgent.getAGENT().getId() || neighborhood.getCell(x, y) <= 0) break;
 					reactState |= AgentState.ALLIES_NEAR;
 					AlliesAgent tempAgent = new AlliesAgent(neighborhood.getCell(x, y));
-					if (!allies.contains(tempAgent)) allies.add(tempAgent);
-					
+					tempAgent.setSeenPosition(getPositionAt(x+getCurentPosition().getX(),y + getCurentPosition().getY()));
+					if (allies.contains(tempAgent)) {
+						tempAgent = allies.get(allies.indexOf(tempAgent));
+						tempAgent.setSeenPosition(getPositionAt(x+getCurentPosition().getX(),y + getCurentPosition().getY()));
+					}
+					temp.add(tempAgent);
 				}
 				AgentState.setReactState(reactState);
+				synchronized (allies) {
+					allies = temp;
+				}
 				if (LooserAgent.getAGENT().hasFlag()) AgentState.setCalmState(AgentState.RETURN);
 			}
 		}
@@ -108,11 +123,11 @@ public class KnownArena {
 		
 		KnownPosition tempPositionI = new KnownPosition(x,y,type);
 		setPositionAt(x, y, tempPositionI);
-		discoveredPositions.add(tempPositionI);
+		
 		
 		
 		if (getPositionAt(x,y).getType() == Neighborhood.EMPTY) {
-			
+			discoveredPositions.add(tempPositionI);
 			Vector<Group> neighborGroups = new Vector<Group>();
 			
 			
@@ -126,7 +141,9 @@ public class KnownArena {
 			if (tempPositionN != null && tempPositionN.getType() == Neighborhood.EMPTY) neighborGroups.add(tempPositionN.getGroup());
 			
 			tempPositionI.setGroup();
-			this.toVisit.add(tempPositionI);
+			synchronized (this.toVisit) {
+				this.toVisit.add(this.toVisit.size(), tempPositionI);
+			} 
 			neighborGroups.add(tempPositionI.getGroup());
 			Group.connect(neighborGroups);
 			
@@ -201,6 +218,7 @@ public class KnownArena {
 	public boolean canMove(KnownPosition position) {
 		if (this.getPositionAt(position) == null
 				|| this.getPositionAt(position).getType() != Neighborhood.EMPTY) {
+			
 			return false;
 		}
 		return true;
@@ -210,23 +228,63 @@ public class KnownArena {
 		return arena;
 	}
 	
+	private HashSet<KnownPosition> waitForSuperior() {
+		HashSet<KnownPosition> forbiden = new HashSet<KnownPosition>();
+		Collections.sort(allies); 
+		boolean vsi = false;
+		int i = 10;
+		while (!vsi && i-- > 0) {
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			synchronized (allies) {
+				for (AlliesAgent agent : allies) {
+					if (agent.getID() > LooserAgent.getAGENT().getId())
+						break;
+					if (agent.getSeenPosition() != null && !agent.getSeenPosition().equals(
+							agent.getCurrentPosition())) {
+						vsi = false;
+						continue;
+					}
+					forbiden.add(agent.getCurrentPosition());
+					forbiden.add(agent.getPlanedPosition());
+					vsi = true;
+				}
+			}
+		}
+		return forbiden;
+	}
+	
 	public KnownPosition getBestExploreCandidate() {
 		HashSet<KnownPosition> tempSet = new HashSet<KnownPosition>();
-		for (KnownPosition position : toVisit) {
-			if (position.isAccesible()) tempSet.add(position);
+		synchronized (toVisit) {
+			for (KnownPosition position : toVisit) {
+				if (position.isAccesible()) tempSet.add(position);
+			}
 		}
+		// TODO this.forbiden = waitForSuperior();
 		Planer.makePlanAStarMulti(tempSet);
 		Vector<KnownPosition> toRemove = new Vector<KnownPosition>();
-		for (KnownPosition position : toVisit) {
-			if (position.eval()) toRemove.add(position);
+		synchronized (toVisit) {
+			for (KnownPosition position : toVisit) {
+				if (position.eval()) toRemove.add(position);
+			}
+			for (KnownPosition position : toRemove) {
+				toVisit.remove(position);
+			}
 		}
-		for (KnownPosition position : toRemove) {
-			toVisit.remove(position);
-		}
+		this.forbiden = waitForSuperior();
 		KnownPosition.setCompareType(CompareType.EXPLORE);
-		Collections.sort(toVisit);
+		synchronized (toVisit) {
+			Collections.sort(toVisit);
+		
 		//System.out.print(toVisit.firstElement().toString());
 		
-		return toVisit.firstElement();
+			if (!toVisit.isEmpty()) return toVisit.firstElement();else
+			return discoveredPositions.get((int)(Math.random()*(discoveredPositions.size()-1)));
+		}
 	}
 }

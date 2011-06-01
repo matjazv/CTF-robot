@@ -51,10 +51,15 @@ public class Message {
 	public static void decodeMessage(byte[] message, int ID) {
 		
 		AlliesAgent tempAgent = new AlliesAgent(ID);
-		if (KnownArena.getARENA().getAllies().contains(tempAgent)) {
-			tempAgent = KnownArena.getARENA().getAllies().get(KnownArena.getARENA().getAllies().indexOf(tempAgent));
-		} else {
-			KnownArena.getARENA().getAllies().add(tempAgent);
+		if (KnownArena.getARENA() == null) return;
+		synchronized (KnownArena.getARENA().getAllies()) {
+			if (KnownArena.getARENA().getAllies() != null
+					&& KnownArena.getARENA().getAllies().contains(tempAgent)) {
+				tempAgent = KnownArena.getARENA().getAllies().get(
+						KnownArena.getARENA().getAllies().indexOf(tempAgent));
+			} else {
+				KnownArena.getARENA().getAllies().add(tempAgent);
+			}
 		}
 		int index = 0;
 		tempAgent.setState(message[index++]);

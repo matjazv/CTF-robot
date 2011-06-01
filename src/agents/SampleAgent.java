@@ -24,7 +24,6 @@ import java.util.Vector;
 import utils.BestPos;
 import utils.KnownArena;
 import utils.Plan;
-import utils.world.KnownArenaView;
 import utils.world.KnownPosition;
 import utils.world.Planer;
 import fri.pipt.agent.Agent;
@@ -37,8 +36,6 @@ import fri.pipt.protocol.Message.Direction;
 
 @Membership("humans")
 public class SampleAgent extends Agent {
-	private KnownArenaView arenaviev;
-	private KnownArenaView arenavievKA;
 	private static enum AgentState {
 		EXPLORE, SEEK, RETURN
 	}
@@ -212,9 +209,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 		}
 }
 	
-	private void decideOnExplore2() {
-		mulDirection(Planer.getPlan());
-	}
+	
 	
 	private Plan mulDirection(Plan p) {
 		if (p.parent == null) return null;
@@ -277,7 +272,7 @@ private Decision updateDecisions(Neighborhood n, AgentState state) {
 	@Override
 	public void receive(int from, byte[] message) {
 
-		String msg = new String(message);
+		//String msg = new String(message);
 	}
 	@Override
 	public void state(int stamp, Neighborhood neighborhood, Direction direction,

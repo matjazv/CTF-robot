@@ -78,9 +78,27 @@ public class LooserAgent extends Agent {
 	}
 	
 	private void decideOnAlliesNear() {
-		byte [] message = Message.encodeMessage();
-		for (AlliesAgent agent : KnownArena.getARENA().getAllies()) {
-			send(agent.getID(), message);
+		if (hasFlag) {
+			byte [] message = Message.encodeMessage();
+			for (AlliesAgent agent : KnownArena.getARENA().getAllies()) {
+				send(agent.getID(), message);
+			}
+			decideOnReturn();
+		} else {
+			Planer.setToUpdate(true);
+			if(utils.agent.AgentState.getCalmState() == utils.agent.AgentState.EXPLORE) {
+				decideOnExplore();
+			} else if (utils.agent.AgentState.getCalmState() == utils.agent.AgentState.RETURN)  {
+				decideOnReturn();
+			}else if (utils.agent.AgentState.getCalmState() == utils.agent.AgentState.SEEK)  {
+				decideOnSeek();
+			}
+			byte [] message = Message.encodeMessage();
+			synchronized (KnownArena.getARENA().getAllies()) {
+				for (AlliesAgent agent : KnownArena.getARENA().getAllies()) {
+					send(agent.getID(), message);
+				}
+			}
 		}
 	
 	}
@@ -141,11 +159,11 @@ public class LooserAgent extends Agent {
 			this.hasFlag = hasFlag;
 			if (KnownArena.getARENA() == null) { 
 				new KnownArena(neighborhood);
-				arenaView = new KnownArenaView(KnownArena.getARENA());
+				//arenaView = new KnownArenaView(KnownArena.getARENA());
 			} else if ( direction == Direction.NONE ) {
 				KnownArena.getARENA().updatePosition(neighborhood, this.direction);
 
-				arenaView.repaint();
+				//arenaView.repaint();
 			}
 		
 			this.neighborhood = neighborhood;
@@ -176,7 +194,7 @@ public class LooserAgent extends Agent {
 	public void run() {
 		try {
 			Thread.sleep(200);
-			int speed = 2000 / getSpeed();
+			int speed = 5000 / getSpeed();
 			while (isAlive()) {
 				
 				synchronized (waitMutex) {
@@ -200,15 +218,16 @@ public class LooserAgent extends Agent {
 
 	
 	private boolean canMove(Neighborhood n, int x, int y, byte state) {
-		
-		switch (state) {
+		if (n.getCell(x, y) == Neighborhood.WALL) return false;
+		return true;
+		/*switch (state) {
 		case AgentState.RETURN:
 			return n.getCell(x, y) == Neighborhood.EMPTY || n.getCell(x, y) == Neighborhood.HEADQUARTERS;
 		case AgentState.SEEK:
 			return n.getCell(x, y) == Neighborhood.EMPTY || n.getCell(x, y) == Neighborhood.FLAG;
 		default:
 			return n.getCell(x, y) == Neighborhood.EMPTY;		
-		}
+		}*/
 		
 	}
 	

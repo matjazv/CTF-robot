@@ -131,9 +131,40 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	public int compareTo(KnownPosition position) {
 		switch(compareType) {
 		case EXPLORE:
-			if (this.mark == 0 || !this.isAccesible()) return 1;
-			if (position.mark == 0 || !position.isAccesible()) return -1;
-			return (position.mark - this.mark) < 0 ? -1 : ((position.mark - this.mark) == 0 ? 0 : 1);
+			double tdistance = 0;
+			double distance = 0;
+			synchronized (KnownArena.getARENA().getAllies()) {
+				
+				if (KnownArena.getARENA().getAllies() != null && KnownArena.getARENA().getAllies().size() > 0) {
+					int xc= 0;
+					int yc= 0;
+					int xp = 0;
+					int yp = 0;
+					int ic = 0;
+					int i = 0;
+					for (AlliesAgent agent : KnownArena.getARENA().getAllies()) {
+						if (agent.getSeenPosition() != null) {
+							xc += agent.getSeenPosition().getX();
+							yc += agent.getSeenPosition().getY();
+							ic++;
+						}
+						if (agent.getPlanedPosition() != null) {
+							xp += agent.getPlanedPosition().getX();
+							yp += agent.getPlanedPosition().getX();
+							i++;
+						}
+					} 
+					tdistance = Math.abs(getX()-(xc*1.0)/ic) + Math.abs(getY()-(yc*1.0)/ic) + 0.5*(Math.abs(getX()-(xp*1.0)/i) + Math.abs(getY()-(yp*1.0)/i) );
+					distance = Math.abs(position.getX()-(xc*1.0)/ic) + Math.abs(position.getY()-(yc*1.0)/ic) + 0.5*(Math.abs(position.getX()-(xp*1.0)/i) + Math.abs(position.getY()-(yp*1.0)/i) );
+				}
+			}
+			if (distance > 10) distance =  10;
+			else  if (distance > 0 && distance < 3) distance = 0;
+			if ( distance == 0) {
+				if (this.mark == 0 || !this.isAccesible() || KnownArena.getARENA().getForbiden().contains(this)) return 1;
+				if (position.mark == 0 || !position.isAccesible()  || KnownArena.getARENA().getForbiden().contains(position)) return -1;
+			}
+			return ((position.mark*(0.8+distance/80) - this.mark*(0.8+tdistance/80))) < 0 ? -1 : ((position.mark*(0.8+distance/80) - this.mark*(0.8+tdistance/80)) == 0 ? 0 : 1);
 		case PLAN:
 			return this.getF() + this.getH() - position.getF() - position.getH();
 		case PLAN_MULTI:
