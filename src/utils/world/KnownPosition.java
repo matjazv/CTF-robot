@@ -9,7 +9,7 @@ import fri.pipt.protocol.Neighborhood;
 public class KnownPosition implements Comparable<KnownPosition> {
 	
 	public enum CompareType {
-		EXPLORE, PLAN
+		EXPLORE, PLAN, PLAN_MULTI
 	}
 	
 	private static CompareType compareType;
@@ -40,18 +40,12 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	}
 
 	private int x;
-	public void setX(int x) {
-		this.x = x;
-	}
 
 	public int getX() {
 		return x;
 	}
 
 	private int y;
-	public void setY(int y) {
-		this.y = y;
-	}
 
 	public int getY() {
 		return y;
@@ -142,6 +136,8 @@ public class KnownPosition implements Comparable<KnownPosition> {
 			return (position.mark - this.mark) < 0 ? -1 : ((position.mark - this.mark) == 0 ? 0 : 1);
 		case PLAN:
 			return this.getF() + this.getH() - position.getF() - position.getH();
+		case PLAN_MULTI:
+			return this.getF() - position.getF();
 		}
 		return 0;
 	}
@@ -187,6 +183,10 @@ public class KnownPosition implements Comparable<KnownPosition> {
 	private int unAccessible;
 	private int walls;
 	private int distance;
+	public void setDistance(int distance) {
+		this.distance = distance;
+	}
+
 	private double mark;
 	private static double cells = 0;
 	
@@ -208,12 +208,12 @@ public class KnownPosition implements Comparable<KnownPosition> {
 				}
 			}
 		}
-		distance = distance(this, KnownArena.getARENA().getCurentPosition());
+		//distance = distance(this, KnownArena.getARENA().getCurentPosition());
 		this.mark = 1000 * this.unknown / cells
 				* (1 - (this.walls / cells) * LooserAgent.wallImportance)
 				* (1 - (this.unAccessible / cells) * LooserAgent.unAccessibleImportance)
 				* LooserAgent.randomImportance
-				/ ((this.distance / (cells * 0.2)) * LooserAgent.distanceImportance);
+				/ ((this.distance / (cells * 0.05)) * LooserAgent.distanceImportance);
 		return unknown == 0;
 	}
 

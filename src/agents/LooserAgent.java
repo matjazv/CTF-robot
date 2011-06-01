@@ -4,7 +4,10 @@ import java.util.Arrays;
 import java.util.LinkedList;
 
 
+
 import utils.agent.AgentState;
+import utils.agent.Message;
+import utils.world.AlliesAgent;
 import utils.world.Decision;
 import utils.world.KnownArena;
 import utils.world.KnownArenaView;
@@ -63,7 +66,6 @@ public class LooserAgent extends Agent {
 			decideOnAxisNear();
 	}
 	else if ( (utils.agent.AgentState.getReactState() & utils.agent.AgentState.ALLIES_NEAR) != 0 ) {
-			System.out.print("dsfdsgdfashfhahsa");
 			decideOnAlliesNear();
 	}
 		
@@ -76,9 +78,12 @@ public class LooserAgent extends Agent {
 	}
 	
 	private void decideOnAlliesNear() {
-	// TODO Auto-generated method stub
+		byte [] message = Message.encodeMessage();
+		for (AlliesAgent agent : KnownArena.getARENA().getAllies()) {
+			send(agent.getID(), message);
+		}
 	
-}
+	}
 
 	private void decideOnAxisNear() {
 	// TODO Auto-generated method stub
@@ -127,8 +132,7 @@ public class LooserAgent extends Agent {
 
 	@Override
 	public void receive(int from, byte[] message) {
-		//String msg = new String(message);
-		
+		Message.decodeMessage(message, from);
 	}
 	
 	@Override
@@ -141,7 +145,7 @@ public class LooserAgent extends Agent {
 			} else if ( direction == Direction.NONE ) {
 				KnownArena.getARENA().updatePosition(neighborhood, this.direction);
 
-				//arenaView.repaint();
+				arenaView.repaint();
 			}
 		
 			this.neighborhood = neighborhood;
@@ -183,7 +187,7 @@ public class LooserAgent extends Agent {
 						direction = updateDecisions(neighborhood).getDirection();
 						move(direction);
 					}
-					System.out.println(AgentState.getCalmState()); 
+					//System.out.println(AgentState.getCalmState()); 
 				}
 				Thread.sleep(speed);
 			}

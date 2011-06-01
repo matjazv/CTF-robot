@@ -2,6 +2,7 @@ package utils.world;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Vector;
 
 import agents.LooserAgent;
@@ -29,6 +30,10 @@ public class KnownArena {
 	
 	private Vector<AlliesAgent> allies;
 	
+	public Vector<AlliesAgent> getAllies() {
+		return allies;
+	}
+
 	private KnownPosition curentPosition;
 	
 	private KnownPosition flagPosition;
@@ -49,7 +54,7 @@ public class KnownArena {
 		this.arena = new HashMap<KnownPosition, KnownPosition>();
 
 		updateCell(curentPosition.getX(), curentPosition.getY(), Neighborhood.EMPTY);
-		
+		this.curentPosition = getPositionAt(curentPosition.getX(), curentPosition.getY());
 		for (int x = -neighborhood.getSize(); x <= neighborhood.getSize(); x++) {
 			for (int y = -neighborhood.getSize(); y <= neighborhood.getSize(); y++) {
 				
@@ -106,7 +111,7 @@ public class KnownArena {
 		discoveredPositions.add(tempPositionI);
 		
 		
-		if (tempPositionI.getType() == Neighborhood.EMPTY) {
+		if (getPositionAt(x,y).getType() == Neighborhood.EMPTY) {
 			
 			Vector<Group> neighborGroups = new Vector<Group>();
 			
@@ -150,19 +155,19 @@ public class KnownArena {
 	public void updatePosition(Neighborhood neighborhood, Direction direction) {
 		switch (direction) {
 		case UP:
-			curentPosition.setY(curentPosition.getY()-1);
+			curentPosition = getPositionAt(curentPosition.getX(), curentPosition.getY()-1);
 			updateDirection(0, -1, neighborhood);
 			break;
 		case DOWN:
-			curentPosition.setY(curentPosition.getY()+1);
+			curentPosition = getPositionAt(curentPosition.getX(), curentPosition.getY()+1);
 			updateDirection(0, 1, neighborhood);
 			break;
 		case LEFT:
-			curentPosition.setX(curentPosition.getX()-1);
+			curentPosition = getPositionAt(curentPosition.getX() - 1, curentPosition.getY());
 			updateDirection(-1, 0, neighborhood);
 			break;
 		case RIGHT:
-			curentPosition.setX(curentPosition.getX()+1);
+			curentPosition = getPositionAt(curentPosition.getX() + 1, curentPosition.getY());
 			updateDirection(1, 0, neighborhood);
 			break;
 		case NONE:
@@ -206,11 +211,22 @@ public class KnownArena {
 	}
 	
 	public KnownPosition getBestExploreCandidate() {
+		HashSet<KnownPosition> tempSet = new HashSet<KnownPosition>();
 		for (KnownPosition position : toVisit) {
-			position.eval();
+			if (position.isAccesible()) tempSet.add(position);
+		}
+		Planer.makePlanAStarMulti(tempSet);
+		Vector<KnownPosition> toRemove = new Vector<KnownPosition>();
+		for (KnownPosition position : toVisit) {
+			if (position.eval()) toRemove.add(position);
+		}
+		for (KnownPosition position : toRemove) {
+			toVisit.remove(position);
 		}
 		KnownPosition.setCompareType(CompareType.EXPLORE);
 		Collections.sort(toVisit);
+		//System.out.print(toVisit.firstElement().toString());
+		
 		return toVisit.firstElement();
 	}
 }

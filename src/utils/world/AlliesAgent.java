@@ -1,8 +1,36 @@
 package utils.world;
 
 public class AlliesAgent implements Comparable<AlliesAgent> {
-	KnownPosition currentPosition;
-	KnownPosition planedPosition;
+	private KnownPosition currentPosition;
+	public KnownPosition getCurrentPosition() {
+		return currentPosition;
+	}
+
+	public void setCurrentPosition(KnownPosition currentPosition) {
+		this.currentPosition = currentPosition;
+	}
+
+	public KnownPosition getPlanedPosition() {
+		return planedPosition;
+	}
+
+	public void setPlanedPosition(KnownPosition planedPosition) {
+		this.planedPosition = planedPosition;
+	}
+
+	public byte getState() {
+		return state;
+	}
+
+	public void setState(byte state) {
+		this.state = state;
+	}
+
+	private KnownPosition planedPosition;
+	
+	private byte state;
+	
+	
 	private int ID;
 	public int getID() {
 		return ID;

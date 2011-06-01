@@ -15,9 +15,9 @@ public class Planer {
 	private static LinkedList<KnownPosition> seekPlan;
 	private static LinkedList<KnownPosition> returnPlan;
 	
-	private static int counter = 0;
+	private static int counter = 1;
 	public static LinkedList<KnownPosition> getPlan() {
-		counter = (counter+1)%5;
+		//counter = (counter+1)%7;
 		switch (AgentState.getCalmState()) {
 		case AgentState.EXPLORE:
 			if (counter == 0 || explorePlan == null || explorePlan.size() < 2 || !explorePlan.getFirst().equals(KnownArena.getARENA().getCurentPosition())) {
@@ -57,7 +57,6 @@ public class Planer {
 	public static LinkedList<KnownPosition> makePlanAStar(KnownPosition goal, boolean force) {
 		
 		if (KnownArena.getARENA().getPositionAt(goal) == null || (KnownArena.getARENA().getPositionAt(goal).getType() != Neighborhood.EMPTY && !force)) {
-			System.out.println("dsakfglsdahgsadfjgkjdfajalgfkakgjfasdjAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa");
 			return null;
 		}
 		
@@ -117,8 +116,56 @@ public class Planer {
 				priorityQueue.add(tempPosition);
 			}
 		}
-		System.out.println("dsakfglsdahgsadfjgkjdfajalgfkakgjfasdjAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa");
 		return plan;
+	}
+	
+public static void makePlanAStarMulti (HashSet<KnownPosition> goals) {
+		
+		
+		KnownPosition.setCompareType(CompareType.PLAN_MULTI);
+		PriorityQueue<KnownPosition> priorityQueue = new PriorityQueue<KnownPosition>();
+		HashSet<KnownPosition> visited = new HashSet<KnownPosition>();
+		
+		KnownPosition curentPosition = KnownArena.getARENA().getCurentPosition();
+		curentPosition.setF(0);
+		priorityQueue.add(curentPosition);
+		visited.add(curentPosition);
+		
+		KnownPosition position;
+		KnownPosition tempPosition;
+		while (!priorityQueue.isEmpty()) {
+			position = priorityQueue.poll();
+			if (goals.contains(position)) {
+				position.setDistance(position.getF());
+				goals.remove(position);
+				if (goals.isEmpty())return;
+			}
+			tempPosition = KnownArena.getARENA().getPositionAt(position.getX() + 1, position.getY());
+			if (KnownArena.getARENA().canMove(tempPosition) && !visited.contains(tempPosition)) {
+				tempPosition.setF(position.getF() + 1);
+				visited.add(tempPosition);
+				priorityQueue.add(tempPosition);
+			}
+			tempPosition = KnownArena.getARENA().getPositionAt(position.getX() - 1, position.getY());
+			if (KnownArena.getARENA().canMove(tempPosition) && !visited.contains(tempPosition)) {
+				tempPosition.setF(position.getF() + 1);
+				visited.add(tempPosition);
+				priorityQueue.add(tempPosition);
+			}
+			tempPosition = KnownArena.getARENA().getPositionAt(position.getX(), position.getY() + 1);
+			if (KnownArena.getARENA().canMove(tempPosition) && !visited.contains(tempPosition)) {
+				tempPosition.setF(position.getF() + 1);
+				visited.add(tempPosition);
+				priorityQueue.add(tempPosition);
+			}
+			tempPosition = KnownArena.getARENA().getPositionAt(position.getX(), position.getY() - 1);
+			if (KnownArena.getARENA().canMove(tempPosition) && !visited.contains(tempPosition)) {
+				tempPosition.setF(position.getF() + 1);
+				visited.add(tempPosition);
+				priorityQueue.add(tempPosition);
+			}
+		}
+		return;
 	}
 
 }

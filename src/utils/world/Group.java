@@ -20,8 +20,8 @@ public class Group {
 		Collections.sort(neighborGroups, new Comparator<Group> () {
 			@Override
 			public int compare(Group arg0, Group arg1) {
-				if (arg0.getNeighbors() == connectedGroups) return -1;
-				if (arg1.getNeighbors() == connectedGroups) return 1;
+				if (arg0 != null && arg0.getNeighbors() == connectedGroups || arg1 == null) return -1;
+				if (arg1 != null && arg1.getNeighbors() == connectedGroups || arg0 == null) return 1;
 				return arg1.getNeighbors().size() - arg0.getNeighbors().size();
 			}});
 		
