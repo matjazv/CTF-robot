@@ -100,7 +100,7 @@ public class KnownArena {
 				default:
 					if (neighborhood.getCell(x, y) == LooserAgent.getAGENT().getId() || neighborhood.getCell(x, y) <= 0) break;
 					reactState |= AgentState.ALLIES_NEAR;
-					AlliesAgent tempAgent = new AlliesAgent(neighborhood.getCell(x, y));
+					AlliesAgent tempAgent = new AlliesAgent(neighborhood.getCell(x, y), discoveredPositions.size());
 					tempAgent.setSeenPosition(getPositionAt(x+getCurentPosition().getX(),y + getCurentPosition().getY()));
 					if (allies.contains(tempAgent)) {
 						tempAgent = allies.get(allies.indexOf(tempAgent));
@@ -110,7 +110,8 @@ public class KnownArena {
 				}
 				AgentState.setReactState(reactState);
 				synchronized (allies) {
-					allies = temp;
+					allies.clear();
+					allies.addAll(temp);
 				}
 				if (LooserAgent.getAGENT().hasFlag()) AgentState.setCalmState(AgentState.RETURN);
 			}
@@ -230,29 +231,38 @@ public class KnownArena {
 	
 	private HashSet<KnownPosition> waitForSuperior() {
 		HashSet<KnownPosition> forbiden = new HashSet<KnownPosition>();
+		synchronized (allies) {
+		if (allies == null || allies.isEmpty()) return forbiden;
 		Collections.sort(allies); 
-		boolean vsi = false;
-		int i = 10;
-		while (!vsi && i-- > 0) {
+		
 			try {
-				Thread.sleep(1);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			synchronized (allies) {
-				for (AlliesAgent agent : allies) {
+				boolean got = false;
+				for (AlliesAgent agent: allies) {
 					if (agent.getID() > LooserAgent.getAGENT().getId())
 						break;
 					if (agent.getSeenPosition() != null && !agent.getSeenPosition().equals(
 							agent.getCurrentPosition())) {
-						vsi = false;
-						continue;
+						forbiden.add(agent.getSeenPosition());
+						got = true;
+						break;
 					}
-					forbiden.add(agent.getCurrentPosition());
-					forbiden.add(agent.getPlanedPosition());
-					vsi = true;
 				}
+				//if (got) wait(10);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			for (AlliesAgent agent : allies) {
+				System.out.println(agent.getID());
+				if (agent.getID() > LooserAgent.getAGENT().getId())
+					break;
+				if (agent.getSeenPosition() != null && !agent.getSeenPosition().equals(
+						agent.getCurrentPosition())) {
+					forbiden.add(agent.getSeenPosition());
+					continue;
+				}
+				forbiden.add(agent.getCurrentPosition());
+				forbiden.add(agent.getPlanedPosition());
 			}
 		}
 		return forbiden;

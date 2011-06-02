@@ -156,16 +156,22 @@ public class KnownPosition implements Comparable<KnownPosition> {
 					} 
 					tdistance = Math.abs(getX()-(xc*1.0)/ic) + Math.abs(getY()-(yc*1.0)/ic) + 0.5*(Math.abs(getX()-(xp*1.0)/i) + Math.abs(getY()-(yp*1.0)/i) );
 					distance = Math.abs(position.getX()-(xc*1.0)/ic) + Math.abs(position.getY()-(yc*1.0)/ic) + 0.5*(Math.abs(position.getX()-(xp*1.0)/i) + Math.abs(position.getY()-(yp*1.0)/i) );
+					double deltaD = distance - position.distance;
+					double delta = tdistance - this.distance;
+					if (deltaD <= 0) return  -1;
+					if (delta <= 0) return 1;
 				}
+			} 
+			if (this.mark == 0 || !this.isAccesible() || KnownArena.getARENA().getForbiden().contains(this)) return 1;
+			if (position.mark == 0 || !position.isAccesible()  || KnownArena.getARENA().getForbiden().contains(position)) return -1;
+			switch(LooserAgent.princip) {
+			case 1:
+				return ((position.mark - this.mark)) < 0 ? -1 : ((position.mark - this.mark) == 0 ? 0 : 1);
+			case 2:
+				return (int) -((this.mark*10000/(this.distance+(this.nearWall/position.distance))) - (position.mark*10000/(position.distance+(position.nearWall/position.distance))));
+				
 			}
-			if (distance > 10) distance =  10;
-			else  if (distance > 0 && distance < 3) distance = 0;
-			if ( distance == 0) {
-				if (this.mark == 0 || !this.isAccesible() || KnownArena.getARENA().getForbiden().contains(this)) return 1;
-				if (position.mark == 0 || !position.isAccesible()  || KnownArena.getARENA().getForbiden().contains(position)) return -1;
-			}
-			return ((position.mark*(0.8+distance/80) - this.mark*(0.8+tdistance/80))) < 0 ? -1 : ((position.mark*(0.8+distance/80) - this.mark*(0.8+tdistance/80)) == 0 ? 0 : 1);
-		case PLAN:
+			case PLAN:
 			return this.getF() + this.getH() - position.getF() - position.getH();
 		case PLAN_MULTI:
 			return this.getF() - position.getF();

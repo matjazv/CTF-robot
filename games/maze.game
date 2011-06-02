@@ -1,6 +1,6 @@
 gameplay.field=box.png
 gameplay.agents=20
-gameplay.speed=100
+gameplay.speed=10
 gameplay.respawn=30
 message.size=256
 message.neighborhood=3

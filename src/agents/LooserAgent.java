@@ -79,9 +79,12 @@ public class LooserAgent extends Agent {
 	
 	private void decideOnAlliesNear() {
 		if (hasFlag) {
-			byte [] message = Message.encodeMessage();
+			
 			for (AlliesAgent agent : KnownArena.getARENA().getAllies()) {
-				send(agent.getID(), message);
+				synchronized (agent) {
+					byte[] message = Message.encodeMessage(agent);
+					send(agent.getID(), message);
+				}
 			}
 			decideOnReturn();
 		} else {
@@ -93,10 +96,13 @@ public class LooserAgent extends Agent {
 			}else if (utils.agent.AgentState.getCalmState() == utils.agent.AgentState.SEEK)  {
 				decideOnSeek();
 			}
-			byte [] message = Message.encodeMessage();
+			
 			synchronized (KnownArena.getARENA().getAllies()) {
 				for (AlliesAgent agent : KnownArena.getARENA().getAllies()) {
-					send(agent.getID(), message);
+					synchronized (agent) {
+						byte[] message = Message.encodeMessage(agent);
+						send(agent.getID(), message);
+					}
 				}
 			}
 		}
@@ -159,11 +165,11 @@ public class LooserAgent extends Agent {
 			this.hasFlag = hasFlag;
 			if (KnownArena.getARENA() == null) { 
 				new KnownArena(neighborhood);
-				//arenaView = new KnownArenaView(KnownArena.getARENA());
+				arenaView = new KnownArenaView(KnownArena.getARENA());
 			} else if ( direction == Direction.NONE ) {
 				KnownArena.getARENA().updatePosition(neighborhood, this.direction);
 
-				//arenaView.repaint();
+				arenaView.repaint();
 			}
 		
 			this.neighborhood = neighborhood;
@@ -235,6 +241,7 @@ public class LooserAgent extends Agent {
 	public static double unAccessibleImportance;
 	public static double distanceImportance;
 	public static double randomImportance;
+	public static int princip;
 	@Override
 	public void initialize() {
 		left = new Decision(0, Direction.LEFT);
@@ -243,6 +250,7 @@ public class LooserAgent extends Agent {
 		down = new Decision(0, Direction.DOWN);
 		still = new Decision(0, Direction.NONE);
 		
+		princip = Math.random() < 0.9 ? 1 : 2;
 		wallImportance = 0.08 + (0.13 * Math.random());
 		unAccessibleImportance = 0.02 + (0.08 * Math.random());
 		distanceImportance = 0.9 + (0.1 * Math.random());
