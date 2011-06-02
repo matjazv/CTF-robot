@@ -75,14 +75,28 @@ public class Dispatcher implements Runnable {
 						return;
 					}
 	
-					Main.log("New client joined team " + team + ": " + this);
+					if (team.getPassphrase() != null) {
 					
-					sendMessage(new Message.AcknowledgeMessage());
+						String passphrase = ((RegisterMessage) message).getPassphrase();
+						
+						if (passphrase == null) passphrase = "";
+						
+						if (!passphrase.equals(team.getPassphrase())) {
+							Main.log("Rejected client %s for team %s: invalid passphrase", this, ((RegisterMessage) message).getTeam());
+							close();
+							return;
+						}
+						
+					}
+					
+					Main.log("New client joined team " + team + ": " + this);
 					
 					team.addClient(this);
 					
 					status = Status.REGISTERED;
 					
+					sendMessage(new Message.AcknowledgeMessage());
+				
 				}
 				
 				break;
@@ -152,8 +166,10 @@ public class Dispatcher implements Runnable {
 		
 		public void setAgent(Agent agent) {
 		
-			if (this.agent != null)
+			if (this.agent != null) {
+				status = Status.REGISTERED;
 				sendMessage(new Message.TerminateMessage());
+			}
 			
 			this.agent = agent;
 			
@@ -247,6 +263,14 @@ public class Dispatcher implements Runnable {
 
 		}
 		
+		public void send(int from, byte[] message) {
+			
+			if (status != Status.USED) return;
+			
+			sendMessage(new Message.ReceiveMessage(from, message));
+			
+		}
+		
 	}
 	
 	private HashSet<Client> clients = new HashSet<Client>();
@@ -317,7 +341,5 @@ public class Dispatcher implements Runnable {
 		
 		}
 	}
-	
-
 	
 }

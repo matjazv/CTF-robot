@@ -17,7 +17,7 @@ import fri.pipt.arena.SwingView;
 import fri.pipt.protocol.Neighborhood;
 import fri.pipt.protocol.Message.Direction;
 
-@Membership("humans")
+@Membership(team="humans",passphrase="")
 public class HumanAgent extends Agent {
 
 	private JFrame window;

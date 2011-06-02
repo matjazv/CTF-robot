@@ -42,6 +42,12 @@ public class Position implements Serializable {
 		this.y = p.y;
 	}
 	
+	public Position(Position p, int factor) {
+		super();
+		this.x = p.x * factor;
+		this.y = p.y * factor;
+	}
+	
 	public String toString() {
 		return String.format("Position: %d, %d", getX(), getY());
 	}
@@ -65,5 +71,12 @@ public class Position implements Serializable {
     public static int distance(Position p1, Position p2) {
 		return Math.max(Math.abs(p1.getX() - p2.getX()), Math.abs(p1.getY()
 				- p2.getY()));
+    }
+    
+    public void offset(Position p) {
+    	
+    	x += p.x;
+    	y += p.y;
+    	
     }
 }

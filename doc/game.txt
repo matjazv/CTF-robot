@@ -23,21 +23,23 @@ file that is actually an INI-like file.
  * message.size - Maximum personal message size in bytes (optional, default 256)
  * message.neighborhood - The size of the neighborhood scan
     For size N, the entire neighborhood has width and height (N * 2 +1)
+ * message.speed - The personal message transfer speed. Not that this is all game emulation stuff. An integer
+    number means the number of bytes per game step. The messages are queued on the sender side for the sufficient 
+    number of steps and then transmitted to the receiver.
 
 === Teams ===
 
 For each active team it is necessary so specify an id of the team as a property.
 The key of the property is team<N>, where N is an integer number starting with 1.
 The value of the property is the id of the team that is used to identify the clients.
-Optionally one can also specify an additional name of the team as a property with
-a key team<N>.name .
 
 Example:
 
 team1=foo
-team1.name=Foo team
 team2=bar
-team2.name=Bar team
+
+A more sophisticated usage involves a team database that defines id, name, passphrase and
+color for all teams.
 
 === Misc options === 
 

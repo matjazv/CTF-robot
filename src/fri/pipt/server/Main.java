@@ -26,6 +26,8 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -47,13 +49,15 @@ import fri.pipt.arena.Arena;
 import fri.pipt.arena.SwingView;
 import fri.pipt.server.ClientsPanel.SelectionObserver;
 import fri.pipt.server.Dispatcher.Client;
+import fri.pipt.server.Field.Body;
 import fri.pipt.server.Field.BodyPosition;
+import fri.pipt.server.Field.Cell;
 
 public class Main {
 
 	private static final int PORT = 5000;
 
-	private static final String RELEASE = "0.6";
+	private static final String RELEASE = "0.9";
 
 	private static Game game;
 
@@ -73,11 +77,17 @@ public class Main {
 
 	private static GameSwingView view = new GameSwingView();
 
+	private static ClientsPanel clientsPanel = null;
+	
 	private static JLabel gameStepDisplay = new JLabel();
 	
-	private static final String[] ZOOM_LEVELS = new String[] { "50%", "100%",
-			"200%" };
+	private static final String[] ZOOM_LEVELS_TITLES = new String[] {"tiny", "small", "normal",
+			"big", "huge" };
 
+	private static final int[] ZOOM_LEVELS = new int[] {6, 12, 16, 20, 24 };
+	
+	private static final int MAX_TEAMS_VERBOSE = 4;
+	
 	private static Action playpause = new AbstractAction("Play") {
 
 		private static final long serialVersionUID = 1L;
@@ -94,7 +104,7 @@ public class Main {
 	};
 
 	private static class GameSwingView extends SwingView implements
-			GameListener, SelectionObserver {
+			GameListener, SelectionObserver, MouseListener {
 
 		private static final long serialVersionUID = 1L;
 
@@ -102,7 +112,7 @@ public class Main {
 
 		private LinkedList<Message> buffer = new LinkedList<Message>();
 
-		private HeatMap visualization = null;
+		private VisitMap visualization = null;
 
 		public class Message {
 
@@ -122,6 +132,7 @@ public class Main {
 
 		public GameSwingView() {
 			super(12);
+			addMouseListener(this);
 		}
 
 		@Override
@@ -172,7 +183,7 @@ public class Main {
 
 				float progress = (float) (current - m.step) / BUFFER_LIFE;
 
-				int size = Math.min(8, Math.max(3, m.length / 32));
+				int size = Math.min(8, Math.max(3, m.length / cellSize));
 
 				g.fillRect((int) ((1 - progress) * x1 + progress * x2) - size
 						/ 2, (int) ((1 - progress) * y1 + progress * y2) - size
@@ -180,6 +191,24 @@ public class Main {
 
 			}
 
+			if (visualization != null) {
+				
+				BodyPosition p = field.getPosition(visualization.getAgent());
+				
+				if (p != null) {
+					
+					int translateX = (int) (p.getOffsetX() * cellSize);
+					int translateY = (int) (p.getOffsetY() * cellSize);
+					
+					g.drawOval(p.getX() * cellSize + translateX, p.getY() * cellSize
+							 + translateY, cellSize, cellSize);
+					
+					
+				}
+				
+			}
+			
+			
 			synchronized (buffer) {
 				buffer = active;
 			}
@@ -227,23 +256,10 @@ public class Main {
 				if (a == null)
 					return;
 
-				visualization = new HeatMap(game.getField(), history, a, game
+				visualization = new VisitMap(game.getField(), history, a, game
 						.getNeighborhoodSize());
 				setBasePallette((Palette) visualization);
 				game.addListener(visualization);
-			}
-
-		}
-
-		@Override
-		public void teamSelected(Team team) {
-
-			synchronized (this) {
-				if (visualization != null)
-					game.removeListener(visualization);
-
-				visualization = null;
-				setBasePallette(null);
 			}
 
 		}
@@ -258,18 +274,58 @@ public class Main {
 
 		}
 
+		@Override
+		public void mouseClicked(MouseEvent e) {
+			
+			int x = e.getX() / cellSize;
+			
+			int y = e.getY() / cellSize;
+			
+			Field field = game.getField();
+			
+			Cell cell = field.getCell(x, y);
+			
+			if (cell != null) {
+				Body b = cell.getBody();
+				
+				if (b instanceof Agent) {
+					
+					Client cl = ((Agent)b).getTeam().findById(((Agent)b).getId());
+					
+					if (cl != null && Main.clientsPanel != null) {
+						Main.clientsPanel.select(cl);
+					}
+					
+				}
+				
+			}
+			
+		}
+
+		@Override
+		public void mouseEntered(MouseEvent e) {}
+
+		@Override
+		public void mouseExited(MouseEvent e) {}
+
+		@Override
+		public void mousePressed(MouseEvent e) {}
+
+		@Override
+		public void mouseReleased(MouseEvent e) {}
+
 	}
 
 	public static void main(String[] args) throws IOException {
 
-		log("Starting game server (release %s)", RELEASE);
+		info("Starting game server (release %s)", RELEASE);
 
 		if (args.length < 1) {
-			log("Please provide game description file location as an argument.");
+			info("Please provide game description file location as an argument.");
 			System.exit(1);
 		}
 
-		log("Java2D OpenGL acceleration "
+		info("Java2D OpenGL acceleration "
 				+ (("true".equalsIgnoreCase(System
 						.getProperty("sun.java2d.opengl"))) ? "enabled"
 						: "not enabled"));
@@ -278,14 +334,12 @@ public class Main {
 
 		Dispatcher dispatcher = new Dispatcher(PORT, game);
 
-		(new Thread(dispatcher)).start();
-
 		final int gameSpeed = game.getSpeed();
 
 		game.addListener(view);
 
 		game.addListener(history);
-
+		
 		(new Thread(new Runnable() {
 
 			@Override
@@ -320,7 +374,7 @@ public class Main {
 						stepCount = 0;
 						stepTime = 0;
 
-						log(
+						info(
 										"Game step: %d (step: %d fps, render: %d fps)",
 										game.getStep(), stepFPS, renderFPS);
 					}
@@ -333,7 +387,7 @@ public class Main {
 						if (used < sleep)
 							Thread.sleep(sleep - used);
 						else {
-							log("Warning: low frame rate");
+							info("Warning: low frame rate");
 						}
 					} catch (InterruptedException e) {
 						e.printStackTrace();
@@ -344,7 +398,7 @@ public class Main {
 			}
 		})).start();
 
-		JFrame window = new JFrame("AgentField - " + game.getName());
+		JFrame window = new JFrame("AgentField - " + game.getTitle());
 
 		window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -358,7 +412,7 @@ public class Main {
 
 		status.add(new JButton(playpause), BorderLayout.WEST);
 
-		final JComboBox zoom = new JComboBox(ZOOM_LEVELS);
+		final JComboBox zoom = new JComboBox(ZOOM_LEVELS_TITLES);
 
 		zoom.addActionListener(new ActionListener() {
 
@@ -367,7 +421,7 @@ public class Main {
 				int ind = zoom.getSelectedIndex();
 				
 				if (ind > -1) {
-					view.setCellSize(6 * (ind + 1));
+					view.setCellSize(ZOOM_LEVELS[ind]);
 					pane.repaint();
 				}
 			}
@@ -383,10 +437,21 @@ public class Main {
 		
 		left.add(status, BorderLayout.NORTH);
 
-		window.getContentPane().add(
-				new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left,
-						new ClientsPanel(game, view)));
-
+		if (game.getTeams().size() > MAX_TEAMS_VERBOSE) {
+			
+			log("Warning: too many teams, reducing the GUI");
+			
+			window.getContentPane().add(left);
+			
+		} else {
+			
+			clientsPanel = new ClientsPanel(game, view);	
+			window.getContentPane().add(
+					new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left,
+							clientsPanel));
+			
+		}
+		
 		GraphicsEnvironment ge = GraphicsEnvironment
 				.getLocalGraphicsEnvironment();
 
@@ -409,13 +474,24 @@ public class Main {
 		
 		window.setVisible(true);
 
+		(new Thread(dispatcher)).start();
+		
+		log("Server ready.");
+		
 	}
+
 
 	private static DateFormat date = new SimpleDateFormat("[hh:mm:ss] ");
 	
 	public static void log(String format, Object ... objects) {
 		
 		System.out.println(date.format(new Date()) + String.format(format, objects));
+		
+	}
+	
+	public static void info(String format, Object ... objects) {
+		
+		//System.out.println(date.format(new Date()) + String.format(format, objects));
 		
 	}
 	

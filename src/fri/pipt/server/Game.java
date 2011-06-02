@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Vector;
 
-import fri.pipt.protocol.Message;
 import fri.pipt.protocol.Neighborhood;
 import fri.pipt.protocol.Message.Direction;
 import fri.pipt.server.Dispatcher.Client;
@@ -51,6 +50,35 @@ public class Game {
 		UNIQUE, RANDOM, RESPAWN
 	}
 
+	public static class MessageContainter {
+		
+		private int to;
+		
+		private byte[] message;
+
+		private int delay;
+		
+		public MessageContainter(int to, byte[] message, int delay) {
+			super();
+			this.to = to;
+			this.message = message;
+			this.delay = delay;
+		}
+
+		public int getTo() {
+			return to;
+		}
+
+		public byte[] getMessage() {
+			return message;
+		}
+
+		public int decreaseDelay() {
+			return delay--;
+		}
+		
+	}
+	
 	private FlagMode flagMode;
 
 	private int spawnFrequency = 10;
@@ -68,6 +96,8 @@ public class Game {
 	private int neighborhoodSize = 10;
 
 	private float flagWeight = 0;
+	
+	private int messageSpeed = 10;
 	
 	private Properties properties = null;
 
@@ -135,6 +165,24 @@ public class Game {
 		if (game.flagMode == null)
 			game.flagMode = FlagMode.UNIQUE;
 
+		String tdbPath = game.getProperty("teams", null);
+
+		TeamDatabase database = null;
+		
+		if (tdbPath != null) {
+		
+			File tdbFile = new File(tdbPath);
+	
+			if (!tdbPath.startsWith(File.separator)) {
+				tdbFile = new File(f.getParentFile(), tdbPath);
+			}
+			try {
+				database = new TeamDatabase(tdbFile);
+			} catch (IOException e) {
+				Main.log("Unable to load team database: %s", e.toString());
+			}
+		}
+		
 		int index = 0;
 
 		while (true) {
@@ -142,15 +190,17 @@ public class Game {
 			index++;
 
 			String id = game.properties.getProperty("team" + index);
-			String name = game.properties.getProperty("team" + index + ".name");
 
 			if (id == null)
 				break;
 
-			if (name == null)
-				name = id;
-
-			game.teams.put(id, new Team(name, colors[index - 1]));
+			if (database == null) {
+				game.teams.put(id, new Team(id, colors[index - 1]));
+			} else {
+				Team team = database.createTeam(id);
+				if (team == null) break;
+				game.teams.put(id, team);
+			}
 
 			Main.log("Registered team: " + id);
 
@@ -169,8 +219,10 @@ public class Game {
 
 		game.maxAgentsPerTeam = game.getProperty("gameplay.agents", 10);
 
-		game.neighborhoodSize = game.getProperty("message.neighborhood", 10);
+		game.neighborhoodSize = game.getProperty("message.neighborhood", 5);
 
+		game.messageSpeed = game.getProperty("message.speed", 10);
+		
 		if (game.flagMode == FlagMode.RESPAWN) {
 
 			game.flagSpawnFrequency = game.getProperty(
@@ -232,6 +284,8 @@ public class Game {
 				}
 				
 			}
+			
+			t.dispatch();
 		}
 
 		// spawn new agents
@@ -435,11 +489,13 @@ public class Game {
 	}
 
 	
-	public String getName() {
-		if (properties.contains("title"))
-			return properties.getProperty("title");
+	public String getTitle() {
+		String title = properties.getProperty("title");
 
-		return gameSource.getAbsolutePath();
+		if (title == null)
+			title = gameSource.getName();
+		
+		return title;
 	}
 
 	public int getStep() {
@@ -479,7 +535,7 @@ public class Game {
 				return;
 			}
 
-			cltto.sendMessage(new Message.ReceiveMessage(from, message));
+			cltfrom.getAgent().pushMessage(to, message, message.length / messageSpeed);
 
 		} else
 			return;

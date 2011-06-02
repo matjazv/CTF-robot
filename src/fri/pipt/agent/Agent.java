@@ -47,7 +47,7 @@ import fri.pipt.protocol.Message.StateMessage;
  * @author lukacu
  * @see SampleAgent
  */
-@Membership("default")
+@Membership(team="default",passphrase="")
 public abstract class Agent {
 
 	private static Class<Agent> agentClassStatic = null;
@@ -61,6 +61,7 @@ public abstract class Agent {
 		public ProxyClassLoader() {
 			super(ProxyClassLoader.class.getClassLoader());
 			
+			protectedClassPrefixes.add("sun.");
 			protectedClassPrefixes.add("java.");
 			protectedClassPrefixes.add("javax.");
 			protectedClassPrefixes.add("fri.pipt.agent.Agent");
@@ -150,14 +151,17 @@ public abstract class Agent {
 			super(sck);
 
 			String team = "default";
-
+			String passphrase = "";
+			
 			Membership m = agentClassStatic.getAnnotation(Membership.class);
 
-			if (m != null)
-				team = m.value();
+			if (m != null) {
+				team = m.team();
+				passphrase = m.passphrase();
+			}
 
-			sendMessage(new Message.RegisterMessage(team));
-			
+			sendMessage(new Message.RegisterMessage(team, passphrase));
+
 			this.name = name;
 
 		}
@@ -186,7 +190,7 @@ public abstract class Agent {
 						Class<Agent> agentClass = (Class<Agent>) loader
 								.loadClass(agentClassStatic.getCanonicalName());
 
-						agent = agentClass.newInstance();
+						Agent agent = agentClass.newInstance();
 
 						agent.id = ((Message.InitializeMessage) message)
 								.getId();
@@ -205,10 +209,12 @@ public abstract class Agent {
 							e.printStackTrace();
 						}
 
-						status = Status.INITIALIZED;
-
 						sendMessage(new Message.AcknowledgeMessage());
 
+						status = Status.INITIALIZED;
+						
+						this.agent = agent;
+						
 					} catch (Throwable e) {
 						e.printStackTrace();
 					}
@@ -358,6 +364,7 @@ public abstract class Agent {
 		for (int i = 0; i < count; i++) {
 			Socket socket = new Socket(args[0], 5000);
 			socket.setTcpNoDelay(true);
+			
 			ClientProtocolSocket client = new ClientProtocolSocket(socket,
 					"Client " + i);
 
@@ -375,11 +382,11 @@ public abstract class Agent {
 
 		while (true) {
 
-			boolean alive = true;
+			boolean alive = false;
 
 			for (ClientProtocolSocket c : clients) {
 
-				alive &= !c.terminated;
+				alive |= !c.terminated;
 
 			}
 

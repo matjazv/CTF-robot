@@ -133,12 +133,12 @@ public class ProtocolSocket {
 
 						Message message = outQueue.poll();
 						
+						if (debug)
+							System.err.println("*** PROTOCOL OUTGOING >>> " + message.getClass().getSimpleName() + " >>>");
+						
 						out.writeObject(message);
 
 						out.flush();
-						
-						if (debug)
-							System.err.println("*** PROTOCOL OUTGOING >>> " + message.getClass().getSimpleName() + " >>>");
 						
 					} catch (IOException e) {
 						if (debug)
@@ -208,11 +208,13 @@ public class ProtocolSocket {
 		try {
 			in.close();
 		} catch (IOException e) {
+		} catch (NullPointerException e) {
 		}
 		
 		try {
 			out.close();
 		} catch (IOException e) {
+		} catch (NullPointerException e) {
 		}
 	}
 	

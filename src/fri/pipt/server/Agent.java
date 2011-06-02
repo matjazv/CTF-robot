@@ -18,6 +18,7 @@
 package fri.pipt.server;
 
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Set;
 
 import fri.pipt.arena.Arena;
@@ -25,6 +26,7 @@ import fri.pipt.protocol.Message.Direction;
 import fri.pipt.server.Field.Body;
 import fri.pipt.server.Field.BodyPosition;
 import fri.pipt.server.Field.Cell;
+import fri.pipt.server.Game.MessageContainter;
 import fri.pipt.server.Team.Flag;
 import fri.pipt.server.Team.Headquarters;
 import fri.pipt.server.Team.TeamBody;
@@ -43,6 +45,8 @@ public class Agent extends TeamBody {
 
 	private Set<Flag> flags = new HashSet<Flag>();
 
+	private LinkedList<MessageContainter> messageQueue = new LinkedList<MessageContainter>();
+	
 	public Agent(Team team, int id) {
 
 		super(Arena.TILE_AGENT, team);
@@ -76,28 +80,28 @@ public class Agent extends TeamBody {
 			switch (direction) {
 			case DOWN:
 				position.setOffsetY(position.getOffsetY() + speed);
-				if (Math.abs(position.getOffsetY()) < 0.0001f) {
+				if (Math.abs(position.getOffsetY()) < speed) {
 					position.setOffsetY(0);
 					direction = Direction.NONE;
 				}
 				break;
 			case UP:
 				position.setOffsetY(position.getOffsetY() - speed);
-				if (Math.abs(position.getOffsetY()) < 0.0001f) {
+				if (Math.abs(position.getOffsetY()) < speed) {
 					position.setOffsetY(0);
 					direction = Direction.NONE;
 				}
 				break;
 			case LEFT:
 				position.setOffsetX(position.getOffsetX() - speed);
-				if (Math.abs(position.getOffsetX()) < 0.0001f) {
+				if (Math.abs(position.getOffsetX()) < speed) {
 					position.setOffsetX(0);
 					direction = Direction.NONE;
 				}
 				break;
 			case RIGHT:
 				position.setOffsetX(position.getOffsetX() + speed);
-				if (Math.abs(position.getOffsetX()) < 0.0001f) {
+				if (Math.abs(position.getOffsetX()) < speed) {
 					position.setOffsetX(0);
 					direction = Direction.NONE;
 				}
@@ -189,4 +193,28 @@ public class Agent extends TeamBody {
 		return flags.isEmpty() ? Arena.TILE_AGENT : Arena.TILE_AGENT_FLAG;
 	}
 
+	public void pushMessage(int to, byte[] message, int delay) {
+		
+		synchronized (messageQueue) {
+			messageQueue.add(new MessageContainter(to, message, delay));	
+		}
+		
+	}
+	
+	public MessageContainter pullMessage() {
+		
+		synchronized (messageQueue) {
+		
+			MessageContainter m = messageQueue.peek();
+			
+			if (m == null) return null;
+			
+			if (m.decreaseDelay() > 0) return null;
+			
+			return messageQueue.poll();
+			
+		}
+		
+	}
+	
 }

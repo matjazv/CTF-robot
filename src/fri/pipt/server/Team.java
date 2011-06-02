@@ -28,6 +28,7 @@ import fri.pipt.arena.Arena;
 import fri.pipt.server.Dispatcher.Client;
 import fri.pipt.server.Field.Body;
 import fri.pipt.server.Field.BodyPosition;
+import fri.pipt.server.Game.MessageContainter;
 
 public class Team {
 
@@ -97,7 +98,7 @@ public class Team {
 	
 	private HashSet<Flag> flags = new HashSet<Flag>();
 	
-	private String name;
+	private String name, passphrase;
 	
 	private Headquarters hq;
 	
@@ -109,11 +110,20 @@ public class Team {
 		
 		this.name = name;
 		this.color = color;
+		this.passphrase = null;
 
 		hq = new Headquarters(Arena.TILE_HEADQUARTERS, this);
 
 	}
 	
+	public String getPassphrase() {
+		return passphrase;
+	}
+
+	public void setPassphrase(String passphrase) {
+		this.passphrase = passphrase;
+	}
+
 	public Headquarters getHeadquarters() {
 		
 		return hq;
@@ -274,6 +284,27 @@ public class Team {
 		}
 	
 		return moved;
+	}
+	
+	public void dispatch() {
+		
+		synchronized (pool) {
+
+			for (Client c : used) {
+			
+				if (c.getAgent() != null) {
+					MessageContainter msg = c.getAgent().pullMessage();
+					if (msg != null) {
+						
+						Client cltto = findById(msg.getTo());
+						
+						if (cltto != null)
+							cltto.send(c.getAgent().getId(), msg.getMessage());
+						
+					}
+				}
+			}
+		}
 	}
 	
 	public Client findById(int id) {

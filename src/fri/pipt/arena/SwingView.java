@@ -22,9 +22,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Polygon;
 
-import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 
 public class SwingView extends JPanel implements ArenaView {
 
@@ -34,9 +32,39 @@ public class SwingView extends JPanel implements ArenaView {
 
 	protected int cellBorder = 2;
 
+	protected Color borderColor = Color.GRAY;
+	
 	public static interface Palette {
 		
 		public Color getColor(int tile);
+		
+	}
+	
+	public static class HeatPalette implements Palette {
+		
+		private Color heatPalette[];
+		
+		public HeatPalette(int size) {
+			
+			heatPalette = new Color[size];
+			
+			heatPalette[0] = Color.black;
+
+			for (int i = 1; i < heatPalette.length; i++) {
+				heatPalette[i] = new Color((i * 255) / heatPalette.length,
+						Math.max(0, (2 * i * 255) / heatPalette.length - 255), 0);	
+			}
+
+		}
+
+		@Override
+		public Color getColor(int tile) {
+
+			if (tile < 0)
+				return Color.GRAY;
+			
+			return heatPalette[Math.max(0, Math.min(heatPalette.length-1, tile))];
+		}
 		
 	}
 	
@@ -152,15 +180,14 @@ public class SwingView extends JPanel implements ArenaView {
 				
 				switch (body) {
 				case Arena.TILE_AGENT:
-					g.fillOval(i * cellSize + cellBorder + translateX, j * cellSize
-							+ cellBorder + translateY, cellSize - 2 * cellBorder,
-							cellSize - 2 * cellBorder);
+					drawBorderedCircle(g, i * cellSize + cellBorder + translateX, j * cellSize
+							+ cellBorder + translateY, cellSize - 2 * cellBorder);
 					break;
 					
 				case Arena.TILE_AGENT_FLAG:
-					g.fillOval(i * cellSize + cellBorder + translateX, j * cellSize
-							+ cellBorder + translateY, cellSize - 2 * cellBorder,
-							cellSize - 2 * cellBorder);
+					drawBorderedCircle(g, i * cellSize + cellBorder + translateX, j * cellSize
+							+ cellBorder + translateY, cellSize - 2 * cellBorder);
+					g.setColor(color);
 					g.setXORMode(Color.WHITE);
 					flag.translate(i * cellSize + translateX, j * cellSize + translateY);
 					g.fillPolygon(flag);
@@ -170,14 +197,11 @@ public class SwingView extends JPanel implements ArenaView {
 					
 					
 				case Arena.TILE_HEADQUARTERS:
-					g.fillRect(i * cellSize + cellBorder + translateX, j * cellSize
-							+ cellBorder + translateY, cellSize - 2 * cellBorder,
-							cellSize - 2 * cellBorder);
+					drawBorderedSquare(g, i * cellSize + cellBorder + translateX, j * cellSize
+							+ cellBorder + translateY, cellSize - 2 * cellBorder);
 					break;
 				case Arena.TILE_FLAG:
-					flag.translate(i * cellSize + translateX, j * cellSize + translateY);
-					g.fillPolygon(flag);
-					flag.translate(-i * cellSize - translateX, -j * cellSize - translateY);
+					drawBorderedPolygon(g, i * cellSize + translateX, j * cellSize + translateY, flag);
 					break;
 				}
 
@@ -186,6 +210,26 @@ public class SwingView extends JPanel implements ArenaView {
 		}
 
 		
+	}
+	
+	private void drawBorderedCircle(Graphics g, int x, int y, int d) {
+		g.fillOval(x, y, d, d);
+		g.setColor(borderColor);
+		g.drawOval(x, y, d, d);
+	}
+	
+	private void drawBorderedSquare(Graphics g, int x, int y, int d) {
+		g.fillRect(x, y, d, d);
+		g.setColor(borderColor);
+		g.drawRect(x, y, d, d);
+	}
+	
+	private void drawBorderedPolygon(Graphics g, int x, int y, Polygon p) {
+		p.translate(x, y);
+		g.fillPolygon(p);
+		g.setColor(borderColor);
+		g.drawPolygon(p);
+		p.translate(-x, -y);
 	}
 	
 	@Override
@@ -219,6 +263,13 @@ public class SwingView extends JPanel implements ArenaView {
 
 	}
 
+	public Dimension getPreferredSize(Arena arena) {
+
+		return new Dimension(new Dimension(arena.getWidth() * cellSize, arena.getHeight()
+				* cellSize));
+
+	}
+	
 	@Override
 	public void update(Arena view) {
 
@@ -257,21 +308,6 @@ public class SwingView extends JPanel implements ArenaView {
 	
 	public int getCellSize() {
 		return cellSize;
-	}
-	
-	public static void open(SwingView panel) {
-
-		JFrame window = new JFrame("Game");
-
-		window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-		JScrollPane pane = new JScrollPane(panel);
-
-		window.getContentPane().add(pane);
-
-		window.pack();
-
-		window.setVisible(true);
 	}
 	
 	public void setBasePallette(Palette p) {

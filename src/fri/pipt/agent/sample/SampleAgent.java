@@ -29,7 +29,7 @@ import fri.pipt.protocol.Message.Direction;
 
 // Run: java -cp bin fri.pipt.agent.Agent localhost fri.pipt.agent.sample.SampleAgent
 
-@Membership("samples")
+@Membership(team="samples",passphrase="c66ddf4d73f77d52162cb3c2f9678074")
 public class SampleAgent extends Agent {
 
 	private static enum AgentState {

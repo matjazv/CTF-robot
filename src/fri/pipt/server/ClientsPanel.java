@@ -24,15 +24,18 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -50,8 +53,6 @@ public class ClientsPanel extends JPanel {
 	public static interface SelectionObserver {
 		
 		public void clientSelected(Client client);
-		
-		public void teamSelected(Team team);
 		
 	}
 	
@@ -100,7 +101,7 @@ public class ClientsPanel extends JPanel {
 		
 	}
 	
-	private class TeamPanel extends JPanel implements TeamListener, Selectable {
+	private class TeamPanel extends JPanel implements TeamListener {
 
 		private static final long serialVersionUID = 1L;
 		
@@ -120,25 +121,25 @@ public class ClientsPanel extends JPanel {
 			
 			this.team = team;
 			
+			Color color = team.getColor();
+			
+			double gray = 0.2989 * color.getRed() + 0.5870 * color.getGreen() + 0.1140 * color.getBlue(); 
+			
+			header.setBackground(gray > 128 ? Color.DARK_GRAY : Color.WHITE);
+			
 			setLayout(new BorderLayout());
 
-			header.setLayout(new BorderLayout());
+			header.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+			
+			header.setLayout(new BorderLayout(4, 4));
 			
 			title = new JLabel(team.getName());
-			title.setForeground(team.getColor());
+			title.setForeground(color);
 			title.setFont(getFont().deriveFont(Font.BOLD, 14));
 			title.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
 			
-			header.addMouseListener(new MouseAdapter() {
-				
-				@Override
-				public void mouseClicked(MouseEvent e) {
-					ClientsPanel.this.select(TeamPanel.this.team);
-				}
-				
-			});
-			
-			score.setForeground(team.getColor());
+			score.setOpaque(false);
+			score.setForeground(color);
 			score.setFont(getFont().deriveFont(Font.BOLD, 14));
 			score.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
 			score.setHorizontalAlignment(JLabel.RIGHT);
@@ -194,24 +195,7 @@ public class ClientsPanel extends JPanel {
 			this.score.setText(score + "");
 		}
 
-		@Override
-		public void deselect() {
-			setBackground(normalBackground);
-			title.setBackground(normalBackground);
-			score.setBackground(normalBackground);
-			header.setBackground(normalBackground);
-			repaint();
-		}
 
-		@Override
-		public void select() {
-			setBackground(selectedBackground);
-			title.setBackground(selectedBackground);
-			score.setBackground(selectedBackground);
-			header.setBackground(selectedBackground);
-			repaint();
-		}
-		
 	}
 	
 	private class ClientPanel extends JPanel implements ClientListener, Selectable {
@@ -224,10 +208,36 @@ public class ClientsPanel extends JPanel {
 		
 		JLabel agentInfo = new JLabel();
 		
-	/*	JButton kill = new JButton("K");
+		JPanel buttons;
 		
-		JButton history = new JButton("H");
-		*/
+		JButton disconnect = new JButton(new AbstractAction("Disconnect") {
+			
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				
+				ClientPanel.this.client.close();
+				
+			}
+		});
+		
+		JButton kill = new JButton(new AbstractAction("Kill") {
+			
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				
+				Agent agent = ClientPanel.this.client.getAgent();
+				
+				if (agent != null) {
+					agent.die();
+				}
+				
+			}
+		});
+		
 		TrafficMonitor traffic = new TrafficMonitor(20);
 		
 		private ClientPanel(Client cl) {
@@ -257,10 +267,13 @@ public class ClientsPanel extends JPanel {
 			add(side, BorderLayout.EAST);
 			
 			side.add(traffic);
-			/*side.add(Box.createHorizontalStrut(5));
-			side.add(history);
-			side.add(Box.createHorizontalStrut(5));
-			side.add(kill);*/
+			
+			buttons = new JPanel(new StackLayout(Orientation.HORIZONTAL));
+			buttons.setOpaque(false);
+			buttons.add(Box.createHorizontalStrut(5));
+			buttons.add(disconnect);
+			buttons.add(Box.createHorizontalStrut(5));
+			buttons.add(kill);
 			
 			addMouseListener(new MouseAdapter() {
 				
@@ -280,6 +293,12 @@ public class ClientsPanel extends JPanel {
 				return;
 			
 			agentInfo.setText(agent == null ? "n/a" : "Id: " + agent.getId());
+			
+			if (selected == this) {
+				ClientsPanel.this.select(this.client);
+				ClientsPanel.this.select(this.client);
+			}
+			
 		}
 
 		@Override
@@ -287,7 +306,7 @@ public class ClientsPanel extends JPanel {
 			if (this.client != client)
 				return;
 			
-			traffic.push(messages);
+			traffic.push((float)messages / game.getSpeed());
 		}
 
 		@Override
@@ -295,7 +314,10 @@ public class ClientsPanel extends JPanel {
 			setBackground(normalBackground);
 			clientInfo.setBackground(normalBackground);
 			agentInfo.setBackground(normalBackground);
-			repaint();
+			
+			remove(buttons);
+			
+			revalidate();
 		}
 
 		@Override
@@ -303,7 +325,10 @@ public class ClientsPanel extends JPanel {
 			setBackground(selectedBackground);
 			clientInfo.setBackground(selectedBackground);
 			agentInfo.setBackground(selectedBackground);
-			repaint();
+			
+			add(buttons, BorderLayout.SOUTH);
+			
+			revalidate();
 		}
 		
 	}
@@ -312,9 +337,9 @@ public class ClientsPanel extends JPanel {
 
 		private static final long serialVersionUID = 1L;
 
-		private ConcurrentLinkedQueue<Integer> buffer = new ConcurrentLinkedQueue<Integer>();
+		private ConcurrentLinkedQueue<Float> buffer = new ConcurrentLinkedQueue<Float>();
 		
-		private int max = 30, length;
+		private int max = 5, length;
 		
 		public TrafficMonitor(int length) {
 			super();
@@ -322,7 +347,7 @@ public class ClientsPanel extends JPanel {
 			setBackground(Color.BLACK);
 		}
 		
-		public void push(int messages) {
+		public void push(float messages) {
 			buffer.add(messages);
 			if (buffer.size() > length) {
 				buffer.poll();
@@ -337,16 +362,24 @@ public class ClientsPanel extends JPanel {
 			
 			int barWidth = getWidth() / length;
 			
-			g.setColor(Color.GREEN);
-			
-			Iterator<Integer> traffic = buffer.iterator();
+			Iterator<Float> traffic = buffer.iterator();
 			
 			for (int i = 0; i < length; i++) {
 				
 				if (!traffic.hasNext())
 					break;
 				
-				int barHeight = (getHeight() * traffic.next()) / max; 
+				float output = ((float)traffic.next() / (float) max);
+				
+				if (output < 0.7f) {
+					g.setColor(Color.GREEN);
+				} else if (output < 0.9f) {
+					g.setColor(Color.YELLOW);
+				} else {
+					g.setColor(Color.RED);
+				}
+			
+				int barHeight = (int) (getHeight() * output); 
 				
 				g.fillRect(barWidth*i, getHeight() - barHeight, barWidth, barHeight);
 				
@@ -364,14 +397,18 @@ public class ClientsPanel extends JPanel {
 	
 	private SelectionObserver observer;
 	
+	private Game game;
+	
 	public ClientsPanel(Game game, SelectionObserver observer) {
 		super(true);
 
+		this.game = game;
+		
 		this.observer = observer;
 		
 		setLayout(new GridLayout(game.getTeams().size(), 1));
 		
-		selectedBackground = getBackground().darker().darker().darker();
+		selectedBackground = getBackground().brighter().brighter().brighter();
 		normalBackground = getBackground();
 		
 		for (Team t : game.getTeams()) {
@@ -395,39 +432,7 @@ public class ClientsPanel extends JPanel {
 	
 	private Selectable selected = null;
 	
-	private void select(Team team) {
-		
-		TeamPanel tp = teams.get(team);
-
-		if (tp == null)
-			return;
-	
-		if (selected != null && selected == tp) {
-			selected.deselect();	
-			selected = null;
-			
-			if (observer != null)
-				observer.teamSelected(null);
-			
-		} else {
-			if (selected != null) {
-				selected.deselect();
-			}
-			// Not needed at the moment
-			selected = null;
-			/*selected = tp;
-			tp.select();
-			
-			if (observer != null)
-				observer.teamSelected(tp.team);*/
-		}
-
-		
-		
-	}
-	
-	private void select(Client client) {
-		System.out.println(client);
+	public void select(Client client) {
 		if (client == null) {
 			if (selected != null) {
 				selected.deselect();

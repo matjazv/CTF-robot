@@ -9,6 +9,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface Membership {
 
-		String value();
+		String team();
 
+		String passphrase();
+		
 }
